@@ -4,7 +4,7 @@
 #include "uefi_min.h"
 
 #ifdef __cplusplus
-#define extern "C" {
+    #define extern "C" {
 #endif
 
 /*************************************

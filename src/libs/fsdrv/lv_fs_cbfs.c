@@ -1,3 +1,6 @@
+#include "../../../lvgl.h"
+
+#if LV_USE_FS_FATFS
 // this file should not exist
 #ifdef __GNUC__
     #define IS_NOT_USED __attribute__ ((unused))
@@ -8,3 +11,4 @@ IS_NOT_USED static void nothing(void)
 {
     // do nothing
 }
+#endif
