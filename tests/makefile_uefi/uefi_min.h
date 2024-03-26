@@ -1,3 +1,6 @@
+/*
+Copyright © 2022, Unified Extensible Firmware Interface (UEFI) Forum, Inc. All Rights
+*/
 #ifndef __UEFI_MIN_H__
 #define __UEFI_MIN_H__
 
