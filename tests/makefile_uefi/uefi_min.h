@@ -6,7 +6,7 @@
 #endif
 
 #ifdef __cplusplus
-#define extern "C" {
+extern "C" {
 #endif
 
 /*************************************
@@ -27,6 +27,7 @@ typedef signed char INT8;
 typedef UINT64 UINTN;
 typedef INT64 INTN;
 typedef INT64 INTMAX;
+#define MAX_BIT (1ull<63)
 #elif defined(__i386__)
 typedef unsigned long long UINT64;
 typedef long long INT64;
@@ -42,6 +43,7 @@ typedef signed char INT8;
 typedef UINT32 UINTN;
 typedef INT32 INTN;
 typedef INT64 INTMAX;
+#define MAX_BIT (1ul<31)
 #elif defined(__aarch64__)
 typedef unsigned long long UINT64;
 typedef long long INT64;
@@ -57,6 +59,7 @@ typedef signed char INT8;
 typedef UINT64 UINTN;
 typedef INT64 INTN;
 typedef INT64 INTMAX;
+#define MAX_BIT (1ull<63)
 #else 
 #error Architecture is not supported
 #endif
@@ -1444,56 +1447,51 @@ typedef struct _EFI_EDID_OVERRIDE_PROTOCOL {
     EFI_EDID_OVERRIDE_PROTOCOL_GET_EDID GetEdid;
 } EFI_EDID_OVERRIDE_PROTOCOL;
 
-#if defined(__x86_64__)  || defined(__aarch64__)
-#define ERROR(VALUE) (((EFI_STATUS)(VALUE)) | (1ull<<63))
-#else
-#define ERROR(VALUE) (((EFI_STATUS)(VALUE)) | (1ul<<31))
-#endif
-
-#define EFI_WARN(VALUE) (VALUE)
+#define EFI_ENC_ERROR(VALUE) (((EFI_STATUS)(VALUE)) | MAX_BIT)
+#define EFI_ENC_WARN(VALUE) ((EFI_STATUS)(VALUE))
 
 #define EFI_SUCCESS                 0
-#define EFI_LOAD_ERROR              ERROR(1)
-#define EFI_INVALID_PARAMETER       ERROR(2)
-#define EFI_UNSUPPORTED             ERROR(3)
-#define EFI_BAD_BUFFER_SIZE         ERROR(4)
-#define EFI_BUFFER_TOO_SMALL        ERROR(5)
-#define EFI_NOT_READY               ERROR(6)
-#define EFI_DEVICE_ERROR            ERROR(7)
-#define EFI_WRITE_PROTECTED         ERROR(8)
-#define EFI_OUT_OF_RESOURCES        ERROR(9)
-#define EFI_VOLUME_CORRUPTED        ERROR(10)
-#define EFI_VOLUME_FULL             ERROR(11)
-#define EFI_NO_MEDIA                ERROR(12)
-#define EFI_MEDIA_CHANGED           ERROR(13)
-#define EFI_NOT_FOUND               ERROR(14)
-#define EFI_ACCESS_DENIED           ERROR(15)
-#define EFI_NO_RESPONSE             ERROR(16)
-#define EFI_NO_MAPPING              ERROR(17)
-#define EFI_TIMEOUT                 ERROR(18)
-#define EFI_NOT_STARTED             ERROR(19)
-#define EFI_ALREADY_STARTED         ERROR(20)
-#define EFI_ABORTED                 ERROR(21)
-#define EFI_ICMP_ERROR              ERROR(22)
-#define EFI_TFTP_ERROR              ERROR(23)
-#define EFI_PROTOCOL_ERROR          ERROR(24)
-#define EFI_INCOMPATIBLE_VERSION    ERROR(25)
-#define EFI_SECURITY_VIOLATION      ERROR(26)
-#define EFI_CRC_ERROR               ERROR(27)
-#define EFI_END_OF_MEDIA            ERROR(28)
-#define EFI_END_OF_FILE             ERROR(31)
-#define EFI_INVALID_LANGUAGE        ERROR(32)
-#define EFI_COMPROMISED_DATA        ERROR(33)
-#define EFI_IP_ADDRESS_CONFLICT     ERROR(34)
-#define EFI_HTTP_ERROR              ERROR(35)
+#define EFI_LOAD_ERROR              EFI_ENC_ERROR(1)
+#define EFI_INVALID_PARAMETER       EFI_ENC_ERROR(2)
+#define EFI_UNSUPPORTED             EFI_ENC_ERROR(3)
+#define EFI_BAD_BUFFER_SIZE         EFI_ENC_ERROR(4)
+#define EFI_BUFFER_TOO_SMALL        EFI_ENC_ERROR(5)
+#define EFI_NOT_READY               EFI_ENC_ERROR(6)
+#define EFI_DEVICE_ERROR            EFI_ENC_ERROR(7)
+#define EFI_WRITE_PROTECTED         EFI_ENC_ERROR(8)
+#define EFI_OUT_OF_RESOURCES        EFI_ENC_ERROR(9)
+#define EFI_VOLUME_CORRUPTED        EFI_ENC_ERROR(10)
+#define EFI_VOLUME_FULL             EFI_ENC_ERROR(11)
+#define EFI_NO_MEDIA                EFI_ENC_ERROR(12)
+#define EFI_MEDIA_CHANGED           EFI_ENC_ERROR(13)
+#define EFI_NOT_FOUND               EFI_ENC_ERROR(14)
+#define EFI_ACCESS_DENIED           EFI_ENC_ERROR(15)
+#define EFI_NO_RESPONSE             EFI_ENC_ERROR(16)
+#define EFI_NO_MAPPING              EFI_ENC_ERROR(17)
+#define EFI_TIMEOUT                 EFI_ENC_ERROR(18)
+#define EFI_NOT_STARTED             EFI_ENC_ERROR(19)
+#define EFI_ALREADY_STARTED         EFI_ENC_ERROR(20)
+#define EFI_ABORTED                 EFI_ENC_ERROR(21)
+#define EFI_ICMP_ERROR              EFI_ENC_ERROR(22)
+#define EFI_TFTP_ERROR              EFI_ENC_ERROR(23)
+#define EFI_PROTOCOL_ERROR          EFI_ENC_ERROR(24)
+#define EFI_INCOMPATIBLE_VERSION    EFI_ENC_ERROR(25)
+#define EFI_SECURITY_VIOLATION      EFI_ENC_ERROR(26)
+#define EFI_CRC_ERROR               EFI_ENC_ERROR(27)
+#define EFI_END_OF_MEDIA            EFI_ENC_ERROR(28)
+#define EFI_END_OF_FILE             EFI_ENC_ERROR(31)
+#define EFI_INVALID_LANGUAGE        EFI_ENC_ERROR(32)
+#define EFI_COMPROMISED_DATA        EFI_ENC_ERROR(33)
+#define EFI_IP_ADDRESS_CONFLICT     EFI_ENC_ERROR(34)
+#define EFI_HTTP_ERROR              EFI_ENC_ERROR(35)
 
-#define EFI_WARN_UNKNOWN_GLYPH      EFI_WARN(1)
-#define EFI_WARN_DELETE_FAILURE     EFI_WARN(2)
-#define EFI_WARN_WRITE_FAILURE      EFI_WARN(3)
-#define EFI_WARN_BUFFER_TOO_SMALL   EFI_WARN(4)
-#define EFI_WARN_STALE_DATA         EFI_WARN(5)
-#define EFI_WARN_FILE_SYSTEM        EFI_WARN(6)
-#define EFI_WARN_RESET_REQUIRED     EFI_WARN(7)
+#define EFI_WARN_UNKNOWN_GLYPH      EFI_ENC_WARN(1)
+#define EFI_WARN_DELETE_FAILURE     EFI_ENC_WARN(2)
+#define EFI_WARN_WRITE_FAILURE      EFI_ENC_WARN(3)
+#define EFI_WARN_BUFFER_TOO_SMALL   EFI_ENC_WARN(4)
+#define EFI_WARN_STALE_DATA         EFI_ENC_WARN(5)
+#define EFI_WARN_FILE_SYSTEM        EFI_ENC_WARN(6)
+#define EFI_WARN_RESET_REQUIRED     EFI_ENC_WARN(7)
 
 #ifdef __cplusplus
 }
