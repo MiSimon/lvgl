@@ -20,21 +20,24 @@ CSRCS += $(shell find $(LVGL_PATH)/src/widgets -type f -name '*.c')
 CSRCS += $(shell find $(LVGL_PATH)/src -maxdepth 1 -type f -name '*.c')
 
 CSRCS += test.c
-CFLAGS = -Werror  -I$(LVGL_PATH)/.. -I$(CURDIR) \
+CSRCS += lv_efi.c
+CFLAGS = -Werror -Wall  -I$(LVGL_PATH) -I$(CURDIR) \
 	-target $(ARCH)-unknown-windows -ffreestanding -fshort-wchar  -mno-red-zone  -fno-stack-protector -fno-stack-check -mno-red-zone \
 	-DLV_CONF_SKIP=1 \
 	-DLV_BUILD_TEST=1 \
 	-DLV_USE_DEV_VERSION \
+	-DLV_USE_LOG=1 \
+	-DLV_LOG_PRINTF=0 \
 	-DCONFIG_LV_USE_STDLIB_MALLOC=LV_STDLIB_BUILTIN \
 	-DCONFIG_LV_USE_STDLIB_STRING=LV_STDLIB_BUILTIN \
 	-DCONFIG_LV_USE_STDLIB_SPRINTF=LV_STDLIB_BUILTIN \
-	-DCONFIG_LV_STDINT_INCLUDE=\"efi.h\" \
-	-DCONFIG_LV_STDINT_INCLUDE=\"efi.h\" \
-	-DCONFIG_LV_STDDEF_INCLUDE=\"efi.h\" \
-	-DCONFIG_LV_STDBOOL_INCLUDE=\"efi.h\" \
-	-DCONFIG_LV_INTTYPES_INCLUDE=\"efi.h\" \
-	-DCONFIG_LV_LIMITS_INCLUDE=\"efi.h\" \
-	-DCONFIG_LV_STDARG_INCLUDE=\"efi.h\"
+	-DCONFIG_LV_STDINT_INCLUDE=\<lv_efi_types.h\> \
+	-DCONFIG_LV_STDINT_INCLUDE=\<lv_efi_types.h\> \
+	-DCONFIG_LV_STDDEF_INCLUDE=\<lv_efi_types.h\> \
+	-DCONFIG_LV_STDBOOL_INCLUDE=\<lv_efi_types.h\> \
+	-DCONFIG_LV_INTTYPES_INCLUDE=\<lv_efi_types.h\> \
+	-DCONFIG_LV_LIMITS_INCLUDE=\<lv_efi_types.h\> \
+	-DCONFIG_LV_STDARG_INCLUDE=\<lv_efi_types.h\>
 
 LDFLAGS = -target $(ARCH)-unknown-windows -nostdlib -Wl,-entry:efi_main -Wl,-subsystem:efi_application -fuse-ld=lld-link
 
@@ -50,3 +53,9 @@ objs/%.o: $(LVGL_PATH)%.c
 clean:
 	rm -r $(CURDIR)/objs
 	rm test_file
+
+run: test_file 
+	mkdir -p $(CURDIR)/.run/
+	cp test_file $(CURDIR)/.run/
+	echo fs0:\test_file > $(CURDIR)/.run/startup.nsh
+	qemu-system-x86_64 -bios /usr/share/qemu/OVMF.fd -nodefaults -vga std -drive format=raw,file=fat:rw:$(CURDIR)/.run/
