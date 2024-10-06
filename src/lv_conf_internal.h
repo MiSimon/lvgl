@@ -1026,7 +1026,7 @@
     #ifdef CONFIG_LV_ASSERT_HANDLER_INCLUDE
         #define LV_ASSERT_HANDLER_INCLUDE CONFIG_LV_ASSERT_HANDLER_INCLUDE
     #else
-        #define LV_ASSERT_HANDLER_INCLUDE <stdint.h>
+        #define LV_ASSERT_HANDLER_INCLUDE LV_STDINT_INCLUDE
     #endif
 #endif
 #ifndef LV_ASSERT_HANDLER
@@ -3659,6 +3659,24 @@
         #define LV_USE_WINDOWS CONFIG_LV_USE_WINDOWS
     #else
         #define LV_USE_WINDOWS    0
+    #endif
+#endif
+
+/** LVGL UEFI backend */
+#ifndef LV_USE_UEFI
+    #ifdef CONFIG_LV_USE_UEFI
+        #define LV_USE_UEFI CONFIG_LV_USE_UEFI
+    #else
+        #define LV_USE_UEFI    0
+    #endif
+#endif
+#if LV_USE_UEFI
+    #ifndef LV_UEFI_USE_EDK2
+        #ifdef CONFIG_LV_UEFI_USE_EDK2
+            #define LV_LV_UEFI_USE_EDK2 CONFIG_LV_UEFI_USE_EDK2
+        #else
+            #define LV_LV_UEFI_USE_EDK2    0
+        #endif
     #endif
 #endif
 
