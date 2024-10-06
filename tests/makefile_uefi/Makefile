@@ -6,7 +6,7 @@ include ../../lvgl.mk
 
 CSRCS += test.c
 CFLAGS = -Werror  -I$(LVGL_PATH)/.. -I$(CURDIR) \
-	-target $(ARCH)-unknown-windows -ffreestanding -fshort-wchar  -mno-red-zone  -fno-stack-protector -fno-stack-check -mno-red-zone \
+	-target $(ARCH)-unknown-windows -ffreestanding -fshort-wchar  -mno-red-zone  -fno-stack-protector -fno-stack-check -mno-red-zone -nostdinc \
 	-DLV_CONF_SKIP=1 \
 	-DLV_BUILD_TEST=1 \
 	-DLV_BUILD_EXAMPLES=0 \
@@ -14,7 +14,6 @@ CFLAGS = -Werror  -I$(LVGL_PATH)/.. -I$(CURDIR) \
 	-DLV_USE_STDLIB_MALLOC=LV_STDLIB_BUILTIN \
 	-DLV_USE_STDLIB_STRING=LV_STDLIB_BUILTIN \
 	-DLV_USE_STDLIB_SPRINTF=LV_STDLIB_BUILTIN \
-	-DLV_STDINT_INCLUDE=\"efi.h\" \
 	-DLV_STDINT_INCLUDE=\"efi.h\" \
 	-DLV_STDDEF_INCLUDE=\"efi.h\" \
 	-DLV_STDBOOL_INCLUDE=\"efi.h\" \
