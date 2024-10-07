@@ -150,9 +150,9 @@ static lv_uefi_timer_context_t timer_context;
  * @remark This has to be called before lv_init().
 */
 void lv_uefi_init(
-    EFI_HANDLE image_handle, 
-    EFI_SYSTEM_TABLE* system_table)
-{    
+    EFI_HANDLE image_handle,
+    EFI_SYSTEM_TABLE * system_table)
+{
     if(image_handle == NULL) return;
     if(system_table == NULL) return;
 
@@ -222,7 +222,7 @@ void lv_uefi_log_cb(lv_log_level_t level, const char * buf)
 {
     CHAR16 buffer[256];
     UINTN index;
-    
+
     for(index = 0; index < 255 && buf[index] != '\0'; index ++) {
         buffer[index] = buf[index];
     }
