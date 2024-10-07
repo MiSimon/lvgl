@@ -132,7 +132,7 @@ static const lv_uefi_acpi_rsdp_t * lv_uefi_locate_acpi_2_0_rsdp();
  *  STATIC VARIABLES
  **********************/
 
-static EFI_GUID _uefi_guid_acpi_rsdp = { 0x71E86888, 0xF1E4, 0xD311, {0xbc, 0x22, 0x00, 0x80, 0xc7, 0x3c, 0x88, 0x81 }};
+static EFI_GUID _uefi_guid_acpi_rsdp = { 0x8868E871, 0xE4F1, 0x11D3, {0xBC, 0x22, 0x00, 0x80, 0xC7, 0x3C, 0x88, 0x81 }};
 static lv_uefi_acpi_table_signature_t _uefi_acpi_signature_hpet = {{'H', 'P', 'E', 'T'}};
 static lv_uefi_acpi_table_signature_t _uefi_acpi_signature_xsdt = {{'X', 'S', 'D', 'T'}};
 static lv_uefi_timer_context_t timer_context;
@@ -210,9 +210,9 @@ uint32_t lv_uefi_get_milliseconds()
 
     // check if the timer has rolled over
     if(current_value < timer_context.last_value) {
-        timer_context.tick_value += timer_context.meta.max_value - timer_context.last_value;
+        current_value += timer_context.meta.max_value - timer_context.last_value;
     }
-    timer_context.tick_value += current_value;
+    timer_context.tick_value += current_value - timer_context.last_value;
     timer_context.last_value = current_value;
 
     return (uint32_t)((timer_context.tick_value * 1000) / timer_context.meta.frequency);
@@ -283,7 +283,10 @@ static bool lv_uefi_timer_init_hpet(
 
     // try to find the HPET descripton table
     hpet_description_table = (const lv_uefi_acpi_table_hpet_t *) lv_uefi_locate_acpi_table(&_uefi_acpi_signature_hpet);
-    if(hpet_description_table == NULL) return FALSE;
+    if(hpet_description_table == NULL) {
+        LV_LOG_INFO("[lv_uefi] ACPI HPET not found.");
+        return FALSE;
+    }
 
     // we can only handle system memory addresses
     if(hpet_description_table->address.address_space_id != 0) return FALSE;
@@ -291,16 +294,24 @@ static bool lv_uefi_timer_init_hpet(
     hpet_register = (const lv_uefi_hpet_register_t *)hpet_description_table->address.address;
 
     // check if the timer is enabled
-    if((hpet_register->configuration & (1 << 0)) == 0) return FALSE;
+    if((hpet_register->configuration & (1 << 0)) == 0) {
+        LV_LOG_INFO("[lv_uefi] ACPI HPET not enabled.");
+        return FALSE;
+    }
 
     frequency = (1ULL * 1000U * 1000U * 1000U * 1000U * 1000U) / (uint64_t)(hpet_register->capabilities >> 32);
-    if(frequency < 1000) return FALSE;
+    if(frequency < 1000) {
+        LV_LOG_INFO("[lv_uefi] ACPI HPET frequency too low.");
+        return FALSE;
+    }
 
     context->source = LV_UEFI_TIME_SOURCE_HPET;
     context->meta.frequency = frequency;
     // We can only check if the value is 32 bit width but not if it runs in 64 bit mode
     context->meta.max_value = UINT64_MAX;
     context->source_meta.hpet.main_counter_value_register = (uint64_t *) hpet_register->main_counter_value;
+
+    LV_LOG_INFO("[lv_uefi] ACPI HPET can be used, frequency: %llu Hz.", frequency);
 
     return TRUE;
 }
@@ -321,7 +332,7 @@ static void lv_uefi_timer_init()
     LV_LOG_INFO("Trying to find the HPET timer.");
     if(lv_uefi_timer_init_hpet(&timer_context))
         return;
-    LV_LOG_INFO("No timer available.");
+    LV_LOG_WARN("No timer available.");
 
     lv_memset(&timer_context, 0x00, sizeof(lv_uefi_timer_context_t));
 }
@@ -371,11 +382,17 @@ static const lv_uefi_acpi_table_xsdt_t * lv_uefi_locate_acpi_2_0_xsdt()
 
     rsdp = lv_uefi_locate_acpi_2_0_rsdp();
     if(rsdp == NULL) return NULL;
-    if(rsdp->revision != 0x02) return NULL;
+    if(rsdp->revision != 0x02) {
+        LV_LOG_WARN("[lv_uefi] ACPI unsupported revision.");
+        return NULL;
+    }
 
     xsdt = (const lv_uefi_acpi_table_xsdt_t *)(rsdp->xsdt_address);
 
-    if(lv_memcmp(&xsdt->header.signature, &_uefi_acpi_signature_xsdt, 4) != 0) return NULL;
+    if(lv_memcmp(&xsdt->header.signature, &_uefi_acpi_signature_xsdt, 4) != 0) {
+        LV_LOG_WARN("[lv_uefi] ACPI XSDT not found.");
+        return NULL;
+    }
 
     return xsdt;
 }
@@ -390,6 +407,8 @@ static const lv_uefi_acpi_rsdp_t * lv_uefi_locate_acpi_2_0_rsdp()
         }
         return (lv_uefi_acpi_rsdp_t *) gLvEfiST->ConfigurationTable[index].VendorTable;
     }
+
+    LV_LOG_WARN("[lv_uefi] ACPI RSDP not found.");
 
     return NULL;
 }
