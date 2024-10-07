@@ -86,7 +86,7 @@ lv_display_t * lv_uefi_create_display(
                                 display_ctx->gop_protocol->Mode->Info->VerticalResolution);
     lv_display_add_event_cb(display, lv_uefi_display_event_cb, LV_EVENT_DELETE, display);
     lv_display_set_flush_cb(display, lv_uefi_display_flush_cb);
-    lv_display_set_buffers(display, display_ctx->buffer, NULL, display_ctx->buffer_size, LV_DISP_RENDER_MODE_PARTIAL);
+    lv_display_set_buffers(display, display_ctx->buffer, NULL, display_ctx->buffer_size, LV_DISPLAY_RENDER_MODE_DIRECT);
     lv_display_set_user_data(display, display_ctx);
 
     goto finish;
@@ -127,6 +127,43 @@ void * lv_uefi_get_active_display()
 
     for(index = 0; index < no_handles; index++) {
         if(!lv_uefi_test_protocol(handles[index], &_uefi_guid_edid_active)) continue;
+        if(!lv_uefi_test_protocol(handles[index], &_uefi_guid_graphics_output)) continue;
+        active_handle = handles[index];
+        break;
+    }
+
+    goto finish;
+
+error:
+
+finish:
+    if(handles != NULL) gLvEfiBS->FreePool(handles);
+
+    return active_handle;
+}
+
+/**
+ * @brief Try to find any display handle.
+ * @return The handle or NULL if not found.
+*/
+void * lv_uefi_get_any_display()
+{
+    EFI_STATUS status;
+    EFI_HANDLE active_handle = NULL;
+    EFI_HANDLE * handles = NULL;
+    UINTN no_handles;
+    UINTN index;
+
+    // The active display handle shall have EFI_GRAPHICS_OUTPUT_PROTOCOL and EFI_EDID_ACTIVE_PROTOCOL installed
+    status = gLvEfiBS->LocateHandleBuffer(
+                 ByProtocol,
+                 &_uefi_guid_graphics_output,
+                 NULL,
+                 &no_handles,
+                 &handles);
+    if(status != EFI_SUCCESS) goto error;
+
+    for(index = 0; index < no_handles; index++) {
         if(!lv_uefi_test_protocol(handles[index], &_uefi_guid_graphics_output)) continue;
         active_handle = handles[index];
         break;
@@ -202,7 +239,7 @@ static void lv_uefi_display_flush_cb(lv_display_t * display, const lv_area_t * a
                  h,
                  display_ctx->gop_protocol->Mode->Info->HorizontalResolution * sizeof(EFI_GRAPHICS_OUTPUT_BLT_PIXEL));
     if(status != EFI_SUCCESS) {
-        LV_LOG_ERROR("[lv_uefi] Blt operation failed.");
+        LV_LOG_ERROR("[lv_uefi] Blt failed.");
         goto error;
     }
 

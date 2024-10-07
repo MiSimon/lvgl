@@ -36,7 +36,7 @@ extern EFI_RUNTIME_SERVICES * gLvEfiRT;
  * @remark This has to be called before lv_init().
 */
 void lv_uefi_init(
-    EFI_HANDLE* image_handle, 
+    EFI_HANDLE image_handle, 
     EFI_SYSTEM_TABLE* system_table);
 
 /**

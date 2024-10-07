@@ -39,6 +39,12 @@ lv_display_t * lv_uefi_create_display(
 */
 void * lv_uefi_get_active_display();
 
+/**
+ * @brief Try to find any display handle.
+ * @return The handle or NULL if not found.
+*/
+void * lv_uefi_get_any_display();
+
 /**********************
  *      MACROS
  **********************/

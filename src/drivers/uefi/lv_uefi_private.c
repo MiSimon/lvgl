@@ -93,9 +93,20 @@ VOID * lv_uefi_open_protocol(
                  &interface,
                  gLvEfiImageHandle,
                  NULL,
-                 EFI_OPEN_PROTOCOL_EXCLUSIVE);
+                 EFI_OPEN_PROTOCOL_GET_PROTOCOL);
     if(status != EFI_SUCCESS) {
-        LV_LOG_ERROR("couldn't open protocol");
+        LV_LOG_ERROR("[lv_uefi] Couldn't open protocol %08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+            protocol->Data1,
+            protocol->Data2,
+            protocol->Data3,
+            protocol->Data4[0],
+            protocol->Data4[1],
+            protocol->Data4[2],
+            protocol->Data4[3],
+            protocol->Data4[4],
+            protocol->Data4[5],
+            protocol->Data4[6],
+            protocol->Data4[7]);
         interface = NULL;
     }
 
@@ -122,7 +133,18 @@ VOID lv_uefi_close_protocol(
                  gLvEfiImageHandle,
                  NULL);
     if(status != EFI_SUCCESS) {
-        LV_LOG_WARN("couldn't close protocol");
+        LV_LOG_WARN("[lv_uefi] Couldn't close protocol %08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+            protocol->Data1,
+            protocol->Data2,
+            protocol->Data3,
+            protocol->Data4[0],
+            protocol->Data4[1],
+            protocol->Data4[2],
+            protocol->Data4[3],
+            protocol->Data4[4],
+            protocol->Data4[5],
+            protocol->Data4[6],
+            protocol->Data4[7]);
     }
 }
 

@@ -314,7 +314,11 @@ static void lv_uefi_simple_pointer_read_cb(lv_indev_t * indev, lv_indev_data_t *
     status = indev_ctx->protocol.simple->GetState(
                  indev_ctx->protocol.simple,
                  &state);
-    if(status != EFI_SUCCESS) return;
+    if(status == EFI_NOT_READY) return;
+    if(status != EFI_SUCCESS) {
+        LV_LOG_ERROR("[lv_uefi] GetState failed.");
+        return;
+    }
 
     pointer_mov.x = (state.RelativeMovementX * indev_ctx->meta.simple.pixel_per_step_8.x) >> 8;
     pointer_mov.y = (state.RelativeMovementY * indev_ctx->meta.simple.pixel_per_step_8.y) >> 8;
@@ -357,7 +361,11 @@ static void lv_uefi_absolute_pointer_read_cb(lv_indev_t * indev, lv_indev_data_t
     status = indev_ctx->protocol.absolute->GetState(
                  indev_ctx->protocol.absolute,
                  &state);
-    if(status != EFI_SUCCESS) return;
+    if(status == EFI_NOT_READY) return;
+    if(status != EFI_SUCCESS) {
+        LV_LOG_ERROR("[lv_uefi] GetState failed.");
+        return;
+    }
 
     // verify the state
     if(state.CurrentX < indev_ctx->protocol.absolute->Mode->AbsoluteMinX) return;
@@ -387,6 +395,7 @@ static void lv_uefi_simple_text_input_read_cb(lv_indev_t * indev, lv_indev_data_
     if(indev_ctx->meta.release_is_next) {
         data->key = indev_ctx->meta.last_key;
         data->state = LV_INDEV_STATE_RELEASED;
+        data->continue_reading = FALSE;
         indev_ctx->meta.release_is_next = FALSE;
         return;
     }
@@ -394,12 +403,18 @@ static void lv_uefi_simple_text_input_read_cb(lv_indev_t * indev, lv_indev_data_
     status = indev_ctx->protocol.simple->ReadKeyStroke(
                  indev_ctx->protocol.simple,
                  &state);
-    if(status != EFI_SUCCESS) return;
+    if(status == EFI_NOT_READY) return;
+    if(status != EFI_SUCCESS) {
+        LV_LOG_ERROR("[lv_uefi] ReadKeyStroke failed.");
+        return;
+    }
 
     // Store the key for the release event
     indev_ctx->meta.last_key = lv_key_from_uefi_key(&state, 0);
-    data->key = indev_ctx->meta.last_key;
     indev_ctx->meta.release_is_next = TRUE;
+    data->key = indev_ctx->meta.last_key;
+    data->state = LV_INDEV_STATE_PRESSED;
+    data->continue_reading = TRUE;
 }
 
 static void lv_uefi_simple_text_input_ex_read_cb(lv_indev_t * indev, lv_indev_data_t * data)
@@ -416,6 +431,7 @@ static void lv_uefi_simple_text_input_ex_read_cb(lv_indev_t * indev, lv_indev_da
     if(indev_ctx->meta.release_is_next) {
         data->key = indev_ctx->meta.last_key;
         data->state = LV_INDEV_STATE_RELEASED;
+        data->continue_reading = FALSE;
         indev_ctx->meta.release_is_next = FALSE;
         return;
     }
@@ -423,12 +439,18 @@ static void lv_uefi_simple_text_input_ex_read_cb(lv_indev_t * indev, lv_indev_da
     status = indev_ctx->protocol.ex->ReadKeyStrokeEx(
                  indev_ctx->protocol.ex,
                  &state);
-    if(status != EFI_SUCCESS) return;
+    if(status == EFI_NOT_READY) return;
+    if(status != EFI_SUCCESS) {
+        LV_LOG_ERROR("[lv_uefi] ReadKeyStrokeEx failed.");
+        return;
+    }
 
     // Store the key for the release event
     indev_ctx->meta.last_key = lv_key_from_uefi_key(&state.Key, state.KeyState.KeyShiftState);
-    data->key = indev_ctx->meta.last_key;
     indev_ctx->meta.release_is_next = TRUE;
+    data->key = indev_ctx->meta.last_key;
+    data->state = LV_INDEV_STATE_PRESSED;
+    data->continue_reading = TRUE;
 }
 
 static uint32_t _utf8_from_unicode(UINT32 unicode)

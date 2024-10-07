@@ -1,10 +1,8 @@
 /*
 Copyright © 2022, Unified Extensible Firmware Interface (UEFI) Forum, Inc. All Rights
 */
-#ifndef __UEFI_MIN_H__
-#define __UEFI_MIN_H__
-
-#include "../../lvgl.h"
+#ifndef LV_UEFI_H
+#define LV_UEFI_H
 
 #if LV_USE_UEFI
 
@@ -17,27 +15,28 @@ Copyright © 2022, Unified Extensible Firmware Interface (UEFI) Forum, Inc. All 
 #include <Protocol/SimpleTextIn.h>
 #include <Protocol/SimpleTextOut.h>
 #include <Protocol/Timestamp.h>
-#include <Library/UefiBootServicesTableLib.h>
-#include <EdidActive.h>
+#include <Protocol/LoadedImage.h>
+#include <Protocol/EdidActive.h>
+#include <Guid/FileInfo.h>
 #else
 #if defined(__clang__) || defined(__GNUC__)
     #if defined(__x86_64__)
-        #define __LV_ARCH_X64__
+        #define __LV_UEFI_ARCH_X64__
     #elif defined(__i386__)
-        #define __LV_ARCH_X86__
+        #define __LV_UEFI_ARCH_X86__
     #elif defined(__aarch64__)
-        #define __LV_ARCH_AARCH64__
+        #define __LV_UEFI_ARCH_AARCH64__
     #else
         #error Architecture is not supported
     #endif
     #define LV_STATIC_ASSERT _Static_assert
 #elif defined(_MSC_VER)
     #if defined(_M_AMD64) && !defined(_M_ARM64)
-        #define __LV_ARCH_X64__
+        #define __LV_UEFI_ARCH_X64__
     #elif defined(_M_IX86)
-        #define __LV_ARCH_X86__
+        #define __LV_UEFI_ARCH_X86__
     #elif defined(_M_ARM64)
-        #define __LV_ARCH_AARCH64__
+        #define __LV_UEFI_ARCH_AARCH64__
     #else
         #error Architecture is not supported
     #endif
@@ -53,7 +52,7 @@ extern "C" {
 /*************************************
  * TYPES
 *************************************/
-#if defined(__LV_ARCH_X64__)
+#if defined(__LV_UEFI_ARCH_X64__)
 typedef unsigned long long UINT64;
 typedef long long INT64;
 typedef unsigned int UINT32;
@@ -69,7 +68,7 @@ typedef UINT64 UINTN;
 typedef INT64 INTN;
 typedef INT64 INTMAX;
 #define MAX_BIT (1ull<<63)
-#elif defined(__LV_ARCH_X86__)
+#elif defined(__LV_UEFI_ARCH_X86__)
 typedef unsigned long long UINT64;
 typedef long long INT64;
 typedef unsigned int UINT32;
@@ -85,7 +84,7 @@ typedef UINT32 UINTN;
 typedef INT32 INTN;
 typedef INT64 INTMAX;
 #define MAX_BIT (1ul<<31)
-#elif defined(__LV_ARCH_AARCH64__)
+#elif defined(__LV_UEFI_ARCH_AARCH64__)
 typedef unsigned long long UINT64;
 typedef long long INT64;
 typedef unsigned int UINT32;
@@ -117,10 +116,10 @@ typedef INT64 INTMAX;
 #define INT64_MAX   (0x7FFFFFFFFFFFFFFFULL)
 #define UINT64_MAX  (0xFFFFFFFFFFFFFFFFULL)
 
-#if defined(__LV_ARCH_X64__) || defined(__LV_ARCH_AARCH64__)
+#if defined(__LV_UEFI_ARCH_X64__) || defined(__LV_UEFI_ARCH_AARCH64__)
 #define INT_MAX   (0x7FFFFFFFFFFFFFFFULL)
 #define UINT_MAX  (0xFFFFFFFFFFFFFFFFULL)
-#elif defined(__LV_ARCH_X86__)
+#elif defined(__LV_UEFI_ARCH_X86__)
 #define INT_MAX   (0x7FFFFFFFUL)
 #define UINT_MAX  (0xFFFFFFFFUL)
 #endif

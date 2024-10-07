@@ -150,12 +150,12 @@ static lv_uefi_timer_context_t timer_context;
  * @remark This has to be called before lv_init().
 */
 void lv_uefi_init(
-    EFI_HANDLE* image_handle, 
+    EFI_HANDLE image_handle, 
     EFI_SYSTEM_TABLE* system_table)
-{
-    LV_ASSERT_NULL(image_handle);
-    LV_ASSERT_NULL(system_table);
-    
+{    
+    if(image_handle == NULL) return;
+    if(system_table == NULL) return;
+
     gLvEfiImageHandle = image_handle;
     gLvEfiST = system_table;
     gLvEfiBS = gLvEfiST->BootServices;
@@ -216,6 +216,23 @@ uint32_t lv_uefi_get_milliseconds()
     timer_context.last_value = current_value;
 
     return (uint32_t)((timer_context.tick_value * 1000) / timer_context.meta.frequency);
+}
+
+void lv_uefi_log_cb(lv_log_level_t level, const char * buf)
+{
+    CHAR16 buffer[256];
+    UINTN index;
+    
+    for(index = 0; index < 255 && buf[index] != '\0'; index ++) {
+        buffer[index] = buf[index];
+    }
+    buffer[index] = L'\0';
+
+    gLvEfiST->ConOut->OutputString(
+        gLvEfiST->ConOut, buffer);
+
+    gLvEfiST->ConOut->OutputString(
+        gLvEfiST->ConOut, L"\r");
 }
 
 /**********************
@@ -298,10 +315,13 @@ static void lv_uefi_timer_init()
 {
     lv_memset(&timer_context, 0x00, sizeof(lv_uefi_timer_context_t));
 
+    LV_LOG_INFO("Trying to find the timestamp protocol.");
     if(lv_uefi_timer_init_timestamp_protocol(&timer_context))
         return;
+    LV_LOG_INFO("Trying to find the HPET timer.");
     if(lv_uefi_timer_init_hpet(&timer_context))
         return;
+    LV_LOG_INFO("No timer available.");
 
     lv_memset(&timer_context, 0x00, sizeof(lv_uefi_timer_context_t));
 }
