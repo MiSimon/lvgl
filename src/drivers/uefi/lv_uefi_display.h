@@ -1,0 +1,52 @@
+#ifndef __LV_UEFI_DISPLAY_H__
+#define __LV_UEFI_DISPLAY_H__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*********************
+ *      INCLUDES
+ *********************/
+
+#include "../../display/lv_display.h"
+
+#if LV_USE_UEFI
+
+/*********************
+ *      DEFINES
+ *********************/
+
+/**********************
+ *      TYPEDEFS
+ **********************/
+
+/**********************
+ * GLOBAL PROTOTYPES
+ **********************/
+
+/**
+ * @brief Create a LVGL display object.
+ * @param handle The handle on which an instance of the EFI_GRAPHICS_OUTPUT_PROTOCOL protocol is installed.
+ * @return The created LVGL display object.
+*/
+lv_display_t * lv_uefi_create_display(
+    void * handle);
+
+/**
+ * @brief Try to find the active display handle.
+ * @return The handle or NULL if not found.
+*/
+void * lv_uefi_get_active_display();
+
+/**********************
+ *      MACROS
+ **********************/
+
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //__LV_UEFI_DISPLAY_H__

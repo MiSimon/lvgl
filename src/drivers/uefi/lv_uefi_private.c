@@ -1,0 +1,207 @@
+/*********************
+ *      INCLUDES
+ *********************/
+
+#include "lv_uefi_private.h"
+#if LV_USE_UEFI
+
+/*********************
+ *      DEFINES
+ *********************/
+
+/**********************
+ *      TYPEDEFS
+ **********************/
+
+/**********************
+ *  STATIC PROTOTYPES
+ **********************/
+
+/**********************
+ *  GOLBAL VARIABLES
+ **********************/
+EFI_HANDLE gLvEfiImageHandle = NULL;
+EFI_SYSTEM_TABLE * gLvEfiST = NULL;
+EFI_BOOT_SERVICES * gLvEfiBS = NULL;
+EFI_RUNTIME_SERVICES * gLvEfiRT = NULL;
+
+/**********************
+ *  STATIC VARIABLES
+ **********************/
+
+/**********************
+ *      MACROS
+ **********************/
+
+/**********************
+ *   GLOBAL FUNCTIONS
+ **********************/
+
+/**
+ * @brief Test if a protocol is installed at a handle.
+ * @param handle The handle on which the protocol might be installed.
+ * @param protocol The guid of the protocol.
+ * @return TRUE if the protocol is installed, FALSE if not.
+*/
+BOOLEAN lv_uefi_test_protocol(
+    EFI_HANDLE handle,
+    EFI_GUID * protocol)
+{
+    EFI_STATUS status;
+    VOID * interface = NULL;
+
+    LV_ASSERT_NULL(handle);
+    LV_ASSERT_NULL(protocol);
+
+    status = gLvEfiBS->OpenProtocol(
+                 handle,
+                 protocol,
+                 &interface,
+                 gLvEfiImageHandle,
+                 NULL,
+                 EFI_OPEN_PROTOCOL_TEST_PROTOCOL);
+    if(status != EFI_SUCCESS && status != EFI_UNSUPPORTED) {
+        LV_LOG_WARN("couldn't test protocol");
+        return FALSE;
+    }
+    else if(status == EFI_UNSUPPORTED) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ * @brief Open a protocol.
+ * @param handle The handle on which the protocol is installed.
+ * @param protocol The guid of the protocol.
+ * @return A pointer to the interface, NULL if the protocol couldn't be opened.
+*/
+VOID * lv_uefi_open_protocol(
+    EFI_HANDLE handle,
+    EFI_GUID * protocol)
+{
+    EFI_STATUS status;
+    VOID * interface = NULL;
+
+    LV_ASSERT_NULL(handle);
+    LV_ASSERT_NULL(protocol);
+
+    status = gLvEfiBS->OpenProtocol(
+                 handle,
+                 protocol,
+                 &interface,
+                 gLvEfiImageHandle,
+                 NULL,
+                 EFI_OPEN_PROTOCOL_EXCLUSIVE);
+    if(status != EFI_SUCCESS) {
+        LV_LOG_ERROR("couldn't open protocol");
+        interface = NULL;
+    }
+
+    return interface;
+}
+
+/**
+ * @brief Close a protocol.
+ * @param handle The handle on which the protocol is installed.
+ * @param protocol The guid of the protocol.
+*/
+VOID lv_uefi_close_protocol(
+    EFI_HANDLE handle,
+    EFI_GUID * protocol)
+{
+    EFI_STATUS status;
+
+    LV_ASSERT_NULL(handle);
+    LV_ASSERT_NULL(protocol);
+
+    status = gLvEfiBS->CloseProtocol(
+                 handle,
+                 protocol,
+                 gLvEfiImageHandle,
+                 NULL);
+    if(status != EFI_SUCCESS) {
+        LV_LOG_WARN("couldn't close protocol");
+    }
+}
+
+/**
+ * @brief Convert an UCS-2 string to an ASCII string.
+ * The string must contain only characters >= 0x20 and <= 0X7E.
+ * @param ucs2 The UCS-2 string.
+ * @param ascii The buffer to store the ASCII string.
+ * @param ascii_len The size of the buffer in ASCII characters.
+ * @return The number of characters written to the buffer or 0 if
+ * there was an error.
+*/
+size_t lv_uefi_ucs2_to_ascii(
+    const CHAR16 * ucs2,
+    char * ascii,
+    size_t ascii_len)
+{
+    uint8_t invalid_character;
+    size_t string_index;
+
+    if(ucs2 == NULL || ascii == NULL || ascii_len == 0) {
+        return 0;
+    }
+
+    invalid_character = 0;
+
+    for(string_index = 0; ucs2[string_index] != 0x0000 && string_index < ascii_len - 1; string_index++) {
+        if(ucs2[string_index] < 0x20 || ucs2[string_index] > 0x7E) {
+            invalid_character = 1;
+            break;
+        }
+        ascii[string_index] = (char) ucs2[string_index];
+    }
+
+    // terminate the string even if there was an error
+    ascii[string_index] = 0x00;
+
+    return invalid_character == 0 ? string_index : 0;
+}
+
+/**
+ * @brief Convert an ASCII string to an UCS-2 string.
+ * The string must contain only characters >= 0x20 and <= 0X7E.
+ * @param ascii The ASCII string.
+ * @param ucs2 The buffer to store the UCS-2 string.
+ * @param ucs2_len The size of the buffer in UCS-2 characters.
+ * @return The number of bytes written to the buffer or 0 if
+ * there was an error.
+*/
+size_t lv_uefi_ascii_to_ucs2(
+    const char * ascii,
+    CHAR16 * ucs2,
+    size_t ucs2_len)
+{
+    uint8_t invalid_character;
+    size_t string_index;
+
+    if(ascii == NULL || ucs2 == NULL || ucs2_len == 0) {
+        return 0;
+    }
+
+    invalid_character = 0;
+
+    for(string_index = 0; ascii[string_index] != 0x0000 && string_index < ucs2_len - 1; string_index++) {
+        if(ascii[string_index] < 0x20 || ascii[string_index] > 0x7E) {
+            invalid_character = 1;
+            break;
+        }
+        ucs2[string_index] = (CHAR16) ascii[string_index];
+    }
+
+    // terminate the string even if there was an error
+    ucs2[string_index] = 0x0000;
+
+    return invalid_character == 0 ? string_index : 0;
+}
+
+/**********************
+ *   STATIC FUNCTIONS
+ **********************/
+
+#endif

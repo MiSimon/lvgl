@@ -61,6 +61,9 @@
 #if LV_USE_WINDOWS
     #include "drivers/windows/lv_windows_context.h"
 #endif
+#if LV_USE_UEFI
+    #include "drivers/uefi/lv_uefi_context.h"
+#endif
 
 /*********************
  *      DEFINES
@@ -219,6 +222,10 @@ void lv_init(void)
 
 #if LV_USE_WINDOWS
     lv_windows_platform_init();
+#endif
+
+#if LV_USE_UEFI
+    lv_uefi_platform_init();
 #endif
 
     lv_obj_style_init();
@@ -391,6 +398,10 @@ void lv_deinit(void)
     lv_refr_deinit();
 
     lv_obj_style_deinit();
+
+#if LV_USE_UEFI
+    lv_uefi_platform_deinit();
+#endif
 
 #if LV_USE_DRAW_PXP
     lv_draw_pxp_deinit();
