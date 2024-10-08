@@ -19,6 +19,7 @@ typedef enum {
     LV_UEFI_TIME_SOURCE_TIMESTAMP_PROTOCOL,
     LV_UEFI_TIME_SOURCE_HPET,
     LV_UEFI_TIME_SOURCE_ACPI,
+    LV_UEFI_TIME_SOURCE_CPU,
 } lv_uefi_time_source_t;
 
 typedef struct _lv_uefi_timer_context_t {
@@ -80,10 +81,18 @@ typedef struct _lv_uefi_acpi_rsdp_t {
     uint8_t reserved[3];
 } lv_uefi_acpi_rsdp_t;
 
+#ifdef offsetof
+    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_rsdp_t, xsdt_address) == 24, "Invalid RSDP structure");
+#endif
+
 typedef struct _lv_uefi_acpi_table_xsdt_t {
     lv_uefi_acpi_table_header_t header;
     lv_uefi_acpi_table_header_t * entries[0];
 } lv_uefi_acpi_table_xsdt_t;
+
+#ifdef offsetof
+    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_xsdt_t, entries) == 36, "Invalid XSDT structure");
+#endif
 
 typedef struct _lv_uefi_acpi_table_hpet_t {
     lv_uefi_acpi_table_header_t header;
@@ -199,6 +208,11 @@ static bool lv_uefi_timer_init_acpi(
 static void lv_uefi_timer_deinit_acpi(
     lv_uefi_timer_context_t * context);
 
+static bool lv_uefi_timer_init_cpu(
+    lv_uefi_timer_context_t * context);
+static void lv_uefi_timer_deinit_cpu(
+    lv_uefi_timer_context_t * context);
+
 static void lv_uefi_timer_init();
 static void lv_uefi_timer_deinit();
 
@@ -289,6 +303,9 @@ uint32_t lv_uefi_get_milliseconds()
             break;
         case LV_UEFI_TIME_SOURCE_ACPI:
             current_value = (uint64_t) * timer_context.source_meta.acpi.timer_address;
+            break;
+        case LV_UEFI_TIME_SOURCE_CPU:
+            current_value = lv_uefi_cpu_timer_get_frequency();
             break;
         default:
             return UINT32_MAX;
@@ -450,6 +467,29 @@ static void lv_uefi_timer_deinit_acpi(
     ;
 }
 
+static bool lv_uefi_timer_init_cpu(
+    lv_uefi_timer_context_t * context)
+{
+    if(!lv_uefi_cpu_timer_is_supported()) {
+        LV_LOG_INFO("[lv_uefi] CPU timer is not supported.");
+        return FALSE;
+    }
+
+    context->source = LV_UEFI_TIME_SOURCE_CPU;
+    context->meta.frequency = lv_uefi_cpu_timer_get_frequency();
+    context->meta.max_value = UINT64_MAX;
+
+    LV_LOG_INFO("[lv_uefi] CPU timer can be used, frequency: %llu Hz.", context->meta.frequency);
+
+    return TRUE;
+}
+
+static void lv_uefi_timer_deinit_cpu(
+    lv_uefi_timer_context_t * context)
+{
+    ;
+}
+
 static void lv_uefi_timer_init()
 {
     lv_memset(&timer_context, 0x00, sizeof(lv_uefi_timer_context_t));
@@ -462,6 +502,9 @@ static void lv_uefi_timer_init()
         return;
     LV_LOG_INFO("Trying to find the ACPI timer.");
     if(lv_uefi_timer_init_acpi(&timer_context))
+        return;
+    LV_LOG_INFO("Trying to find the CPU timer.");
+    if(lv_uefi_timer_init_cpu(&timer_context))
         return;
     LV_LOG_WARN("No timer available.");
 
@@ -477,9 +520,11 @@ static void lv_uefi_timer_deinit()
         case LV_UEFI_TIME_SOURCE_HPET:
             lv_uefi_timer_deinit_hpet(&timer_context);
             break;
-            break;
         case LV_UEFI_TIME_SOURCE_ACPI:
             lv_uefi_timer_deinit_acpi(&timer_context);
+            break;
+        case LV_UEFI_TIME_SOURCE_CPU:
+            lv_uefi_timer_deinit_cpu(&timer_context);
             break;
         default:
             break;

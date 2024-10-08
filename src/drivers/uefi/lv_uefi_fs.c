@@ -271,7 +271,7 @@ static lv_fs_res_t lv_uefi_fs_seek_cb(lv_fs_drv_t * drv, void * file_p, uint32_t
 {
     EFI_STATUS status;
     lv_uefi_fs_file_context_t * file_ctx = (lv_uefi_fs_file_context_t *)file_p;
-    UINTN new_pos;
+    UINT64 new_pos;
 
     if(file_ctx->interface == NULL) return LV_FS_RES_NOT_EX;
 
@@ -320,7 +320,7 @@ static lv_fs_res_t lv_uefi_fs_tell_cb(lv_fs_drv_t * drv, void * file_p, uint32_t
 {
     EFI_STATUS status;
     lv_uefi_fs_file_context_t * file_ctx = (lv_uefi_fs_file_context_t *)file_p;
-    UINTN pos;
+    UINT64 pos;
 
     if(file_ctx->interface == NULL) return LV_FS_RES_NOT_EX;
 
