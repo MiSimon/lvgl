@@ -97,8 +97,8 @@ typedef struct _lv_uefi_hpet_register_t {
     uint64_t reserved2;
     uint64_t interrupt_status;
     uint64_t reserved3;
+    uint8_t  reserved4[0xF0 - 0x30];
     uint64_t main_counter_value;
-    uint64_t reserved4;
 } lv_uefi_hpet_register_t;
 
 #pragma pack(pop)
@@ -201,7 +201,7 @@ uint32_t lv_uefi_get_milliseconds()
             current_value = *timer_context.source_meta.hpet.main_counter_value_register;
             // check if the timer is running in 32 bit mode and has rolled over
             if(current_value < timer_context.last_value && timer_context.last_value < UINT32_MAX) {
-                current_value += UINT32_MAX - timer_context.last_value;
+                current_value += UINT32_MAX - timer_context.last_value + 1;
             }
             break;
         default:
@@ -210,7 +210,7 @@ uint32_t lv_uefi_get_milliseconds()
 
     // check if the timer has rolled over
     if(current_value < timer_context.last_value) {
-        current_value += timer_context.meta.max_value - timer_context.last_value;
+        current_value += timer_context.meta.max_value - timer_context.last_value + 1;
     }
     timer_context.tick_value += current_value - timer_context.last_value;
     timer_context.last_value = current_value;
@@ -309,7 +309,7 @@ static bool lv_uefi_timer_init_hpet(
     context->meta.frequency = frequency;
     // We can only check if the value is 32 bit width but not if it runs in 64 bit mode
     context->meta.max_value = UINT64_MAX;
-    context->source_meta.hpet.main_counter_value_register = (uint64_t *) hpet_register->main_counter_value;
+    context->source_meta.hpet.main_counter_value_register = (uint64_t *) &hpet_register->main_counter_value;
 
     LV_LOG_INFO("[lv_uefi] ACPI HPET can be used, frequency: %llu Hz.", frequency);
 
