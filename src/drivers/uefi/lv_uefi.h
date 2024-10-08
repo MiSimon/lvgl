@@ -18,6 +18,8 @@ Copyright © 2022, Unified Extensible Firmware Interface (UEFI) Forum, Inc. All 
 #include <Protocol/LoadedImage.h>
 #include <Protocol/EdidActive.h>
 #include <Guid/FileInfo.h>
+#elif LV_USE_UEFI_GNU_EFI
+#include <efi.h>
 #else
 #if defined(__clang__) || defined(__GNUC__)
     #if defined(__x86_64__)
@@ -165,6 +167,7 @@ typedef UINT64 EFI_VIRTUAL_ADDRESS;
 #define OPTIONAL
 #define EFIAPI
 #define CONST const
+#define NULL ((VOID*) 0)
 
 #define TRUE (1==1)
 #define FALSE (1!=1)

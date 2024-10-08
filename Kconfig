@@ -1852,6 +1852,20 @@ menu "LVGL configuration"
 			depends on LV_OS_WINDOWS
 			default n
 
+		config LV_USE_UEFI
+			bool "Use LVGL UEFI backend"
+			default n
+
+		config LV_USE_UEFI_EDK2
+			bool "Use header files from the EDK2 project"
+			depends on LV_USE_UEFI
+			default n
+
+		config LV_USE_UEFI_GNU_EFI
+			bool "Use header files from the gnu-efi project"
+			depends on LV_USE_UEFI
+			default n
+
 		config LV_USE_OPENGLES
 			bool "Use GLFW and OpenGL to open window on PC and handle mouse and keyboard"
 			default n
