@@ -324,20 +324,20 @@ static void lv_uefi_simple_pointer_read_cb(lv_indev_t * indev, lv_indev_data_t *
     pointer_mov.y = (state.RelativeMovementY * indev_ctx->meta.simple.pixel_per_step_8.y) >> 8;
 
     indev_ctx->meta.simple.position.x += pointer_mov.x;
-    indev_ctx->meta.simple.position.y += pointer_mov.x;
+    indev_ctx->meta.simple.position.y += pointer_mov.y;
 
     if(indev_ctx->meta.simple.position.x < 0) {
         indev_ctx->meta.simple.position.x = 0;
     }
-    else if(indev_ctx->meta.simple.position.x > indev_ctx->display_res.x) {
-        indev_ctx->meta.simple.position.x = indev_ctx->display_res.x;
+    else if(indev_ctx->meta.simple.position.x > indev_ctx->display_res.x - 1) {
+        indev_ctx->meta.simple.position.x = indev_ctx->display_res.x - 1;
     }
 
     if(indev_ctx->meta.simple.position.y < 0) {
         indev_ctx->meta.simple.position.y = 0;
     }
-    else if(indev_ctx->meta.simple.position.y > indev_ctx->display_res.y) {
-        indev_ctx->meta.simple.position.y = indev_ctx->display_res.y;
+    else if(indev_ctx->meta.simple.position.y > indev_ctx->display_res.y - 1) {
+        indev_ctx->meta.simple.position.y = indev_ctx->display_res.y - 1;
     }
 
     data->point.x = indev_ctx->meta.simple.position.x;
