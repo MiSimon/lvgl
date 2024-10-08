@@ -13,6 +13,8 @@ extern "C" {
 
 #if LV_USE_UEFI
 
+#include "lv_uefi.h"
+
 /*********************
  *      DEFINES
  *********************/

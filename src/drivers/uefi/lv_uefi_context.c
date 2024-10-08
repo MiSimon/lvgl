@@ -18,6 +18,7 @@ typedef enum {
     LV_UEFI_TIME_SOURCE_UNKNOWN = 0,
     LV_UEFI_TIME_SOURCE_TIMESTAMP_PROTOCOL,
     LV_UEFI_TIME_SOURCE_HPET,
+    LV_UEFI_TIME_SOURCE_ACPI,
 } lv_uefi_time_source_t;
 
 typedef struct _lv_uefi_timer_context_t {
@@ -35,6 +36,9 @@ typedef struct _lv_uefi_timer_context_t {
         struct {
             uint64_t * main_counter_value_register;
         } hpet;
+        struct {
+            uint32_t * timer_address;
+        } acpi;
     } source_meta;
 } lv_uefi_timer_context_t;
 
@@ -90,6 +94,73 @@ typedef struct _lv_uefi_acpi_table_hpet_t {
     uint8_t attributes;
 } lv_uefi_acpi_table_hpet_t;
 
+#ifdef offsetof
+    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_hpet_t, address) == 40, "Invalid HPET structure");
+#endif
+
+typedef struct _lv_uefi_acpi_table_fadt_t {
+    lv_uefi_acpi_table_header_t header;
+    uint32_t firmware_ctrl;
+    uint32_t dsdt;
+    uint8_t reserved;
+    uint8_t prefered_power_management_profile;
+    uint16_t sci_interrupt;
+    uint32_t smi_command_port;
+    uint8_t acpi_enable;
+    uint8_t acpi_disable;
+    uint8_t s4bios_req;
+    uint8_t pstate_control;
+    uint32_t pm1a_event_block;
+    uint32_t pm1b_event_block;
+    uint32_t pm1a_control_block;
+    uint32_t pm1b_control_block;
+    uint32_t pm2_control_block;
+    uint32_t pm_timer_block;
+    uint32_t gpe0_block;
+    uint32_t gpe1_block;
+    uint8_t pm1_event_length;
+    uint8_t pm1_control_length;
+    uint8_t pm2_control_length;
+    uint8_t pm_timer_length;
+    uint8_t gpe0_length;
+    uint8_t gpe1_length;
+    uint8_t gpe1_base;
+    uint8_t c_state_control;
+    uint16_t worst_c2_latency;
+    uint16_t worst_c3_latency;
+    uint16_t flush_size;
+    uint16_t flush_stride;
+    uint8_t duty_offset;
+    uint8_t duty_width;
+    uint8_t day_alarm;
+    uint8_t month_alarm;
+    uint8_t century;
+    // the following fields are only present in verion > 2.0
+    uint16_t boot_architecture_flags;
+    uint8_t reserved2;
+    uint32_t flags;
+    lv_uefi_acpi_address_t reset_reg;
+    uint8_t reset_value;
+    uint8_t reserved3[3];
+    uint64_t x_firmware_control;
+    uint64_t x_dsdt;
+    lv_uefi_acpi_address_t x_pm1a_event_block;
+    lv_uefi_acpi_address_t x_pm1b_event_block;
+    lv_uefi_acpi_address_t x_pm1a_control_block;
+    lv_uefi_acpi_address_t x_pm1b_control_block;
+    lv_uefi_acpi_address_t x_pm2_control_block;
+    lv_uefi_acpi_address_t x_pm_timer_block;
+    lv_uefi_acpi_address_t x_gpe0_block;
+    lv_uefi_acpi_address_t x_gpe1_block;
+} lv_uefi_acpi_table_fadt_t;
+
+#ifdef offsetof
+    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, pm_timer_block) == 76, "Invalid FADT structure");
+    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, pm_timer_length) == 91, "Invalid FADT structure");
+    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, flags) == 112, "Invalid FADT structure");
+    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, x_pm_timer_block) == 208, "Invalid FADT structure");
+#endif
+
 typedef struct _lv_uefi_hpet_register_t {
     uint64_t capabilities;
     uint64_t reserved1;
@@ -100,6 +171,12 @@ typedef struct _lv_uefi_hpet_register_t {
     uint8_t  reserved4[0xF0 - 0x30];
     uint64_t main_counter_value;
 } lv_uefi_hpet_register_t;
+
+#ifdef offsetof
+    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_hpet_register_t, capabilities) == 0, "Invalid HPET register structure");
+    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_hpet_register_t, configuration) == 16, "Invalid HPET register structure");
+    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_hpet_register_t, main_counter_value) == 240, "Invalid HPET register structure");
+#endif
 
 #pragma pack(pop)
 
@@ -115,6 +192,11 @@ static void lv_uefi_timer_deinit_timestamp_protocol(
 static bool lv_uefi_timer_init_hpet(
     lv_uefi_timer_context_t * context);
 static void lv_uefi_timer_deinit_hpet(
+    lv_uefi_timer_context_t * context);
+
+static bool lv_uefi_timer_init_acpi(
+    lv_uefi_timer_context_t * context);
+static void lv_uefi_timer_deinit_acpi(
     lv_uefi_timer_context_t * context);
 
 static void lv_uefi_timer_init();
@@ -135,6 +217,7 @@ static const lv_uefi_acpi_rsdp_t * lv_uefi_locate_acpi_2_0_rsdp();
 static EFI_GUID _uefi_guid_acpi_rsdp = { 0x8868E871, 0xE4F1, 0x11D3, {0xBC, 0x22, 0x00, 0x80, 0xC7, 0x3C, 0x88, 0x81 }};
 static lv_uefi_acpi_table_signature_t _uefi_acpi_signature_hpet = {{'H', 'P', 'E', 'T'}};
 static lv_uefi_acpi_table_signature_t _uefi_acpi_signature_xsdt = {{'X', 'S', 'D', 'T'}};
+static lv_uefi_acpi_table_signature_t _uefi_acpi_signature_fadt = {{'F', 'A', 'C', 'P'}};
 static lv_uefi_timer_context_t timer_context;
 
 /**********************
@@ -203,6 +286,9 @@ uint32_t lv_uefi_get_milliseconds()
             if(current_value < timer_context.last_value && timer_context.last_value < UINT32_MAX) {
                 current_value += UINT32_MAX - timer_context.last_value + 1;
             }
+            break;
+        case LV_UEFI_TIME_SOURCE_ACPI:
+            current_value = (uint64_t) * timer_context.source_meta.acpi.timer_address;
             break;
         default:
             return UINT32_MAX;
@@ -277,21 +363,23 @@ static void lv_uefi_timer_deinit_timestamp_protocol(
 static bool lv_uefi_timer_init_hpet(
     lv_uefi_timer_context_t * context)
 {
-    const lv_uefi_acpi_table_hpet_t * hpet_description_table = NULL;
+    const lv_uefi_acpi_table_hpet_t * hpet_acpi_table = NULL;
     const lv_uefi_hpet_register_t * hpet_register = NULL;
     uint64_t frequency;
 
-    // try to find the HPET descripton table
-    hpet_description_table = (const lv_uefi_acpi_table_hpet_t *) lv_uefi_locate_acpi_table(&_uefi_acpi_signature_hpet);
-    if(hpet_description_table == NULL) {
+    // try to find the HPET table
+    hpet_acpi_table = (const lv_uefi_acpi_table_hpet_t *) lv_uefi_locate_acpi_table(&_uefi_acpi_signature_hpet);
+    if(hpet_acpi_table == NULL) {
         LV_LOG_INFO("[lv_uefi] ACPI HPET not found.");
         return FALSE;
     }
 
     // we can only handle system memory addresses
-    if(hpet_description_table->address.address_space_id != 0) return FALSE;
+    if(hpet_acpi_table->address.address_space_id != 0) return FALSE;
+    // check if the address is valid
+    if(hpet_acpi_table->address.address == 0) return FALSE;
 
-    hpet_register = (const lv_uefi_hpet_register_t *)hpet_description_table->address.address;
+    hpet_register = (const lv_uefi_hpet_register_t *)hpet_acpi_table->address.address;
 
     // check if the timer is enabled
     if((hpet_register->configuration & (1 << 0)) == 0) {
@@ -311,12 +399,52 @@ static bool lv_uefi_timer_init_hpet(
     context->meta.max_value = UINT64_MAX;
     context->source_meta.hpet.main_counter_value_register = (uint64_t *) &hpet_register->main_counter_value;
 
-    LV_LOG_INFO("[lv_uefi] ACPI HPET can be used, frequency: %llu Hz.", frequency);
+    LV_LOG_INFO("[lv_uefi] ACPI HPET can be used, frequency: %llu Hz.", context->meta.frequency);
 
     return TRUE;
 }
 
 static void lv_uefi_timer_deinit_hpet(
+    lv_uefi_timer_context_t * context)
+{
+    ;
+}
+
+static bool lv_uefi_timer_init_acpi(
+    lv_uefi_timer_context_t * context)
+{
+    const lv_uefi_acpi_table_fadt_t * fadt_acpi_table = NULL;
+
+    // try to find the FADT table
+    fadt_acpi_table = (const lv_uefi_acpi_table_fadt_t *) lv_uefi_locate_acpi_table(&_uefi_acpi_signature_fadt);
+    if(fadt_acpi_table == NULL) {
+        LV_LOG_INFO("[lv_uefi] ACPI FADT not found.");
+        return FALSE;
+    }
+
+    if(fadt_acpi_table->pm_timer_length != 4) {
+        LV_LOG_INFO("[lv_uefi] ACPI timer is not available.");
+        return FALSE;
+    }
+
+    // we can only handle system memory addresses
+    if(fadt_acpi_table->x_pm_timer_block.address_space_id != 0) return FALSE;
+    // check if the address is valid
+    if(fadt_acpi_table->x_pm_timer_block.address == 0) return FALSE;
+
+    context->source = LV_UEFI_TIME_SOURCE_ACPI;
+    // ACPI timer has a frequency of 3.579545 MHz as long as the system is in the S0 state
+    context->meta.frequency = 3579545;
+    // If bit 8 in the flags field is set, the timer is a 32 bit timer and if not it is a 24 bit timer
+    context->meta.max_value = (fadt_acpi_table->flags & (1 << 8)) != 0 ? UINT32_MAX : 0x00FFFFFF;
+    context->source_meta.acpi.timer_address = (uint32_t *) fadt_acpi_table->x_pm_timer_block.address;
+
+    LV_LOG_INFO("[lv_uefi] ACPI timer can be used, frequency: %llu Hz.", context->meta.frequency);
+
+    return TRUE;
+}
+
+static void lv_uefi_timer_deinit_acpi(
     lv_uefi_timer_context_t * context)
 {
     ;
@@ -332,6 +460,9 @@ static void lv_uefi_timer_init()
     LV_LOG_INFO("Trying to find the HPET timer.");
     if(lv_uefi_timer_init_hpet(&timer_context))
         return;
+    LV_LOG_INFO("Trying to find the ACPI timer.");
+    if(lv_uefi_timer_init_acpi(&timer_context))
+        return;
     LV_LOG_WARN("No timer available.");
 
     lv_memset(&timer_context, 0x00, sizeof(lv_uefi_timer_context_t));
@@ -345,6 +476,10 @@ static void lv_uefi_timer_deinit()
             break;
         case LV_UEFI_TIME_SOURCE_HPET:
             lv_uefi_timer_deinit_hpet(&timer_context);
+            break;
+            break;
+        case LV_UEFI_TIME_SOURCE_ACPI:
+            lv_uefi_timer_deinit_acpi(&timer_context);
             break;
         default:
             break;
@@ -363,7 +498,7 @@ static const void * lv_uefi_locate_acpi_table(const lv_uefi_acpi_table_signature
     xsdt = lv_uefi_locate_acpi_2_0_xsdt();
     if(xsdt == NULL) return NULL;
 
-    no_entries = xsdt->header.length - sizeof(lv_uefi_acpi_table_xsdt_t) / 8;
+    no_entries = (xsdt->header.length - sizeof(lv_uefi_acpi_table_xsdt_t)) / 8;
 
     for(index = 0; index < no_entries; index++) {
         if(lv_memcmp(signature, &xsdt->entries[index]->signature, sizeof(lv_uefi_acpi_table_signature_t)) != 0) {

@@ -3690,9 +3690,31 @@
                 #define LV_USE_UEFI_GNU_EFI    0
             #endif
         #else
-            #define LV_USE_UEFI_EDK2    0
+            #define LV_USE_UEFI_GNU_EFI    0
         #endif
     #endif
+    #ifndef LV_USE_UEFI_CUSTOM
+        #ifdef LV_KCONFIG_PRESENT
+            #ifdef CONFIG_LV_USE_UEFI_CUSTOM
+                #define LV_USE_UEFI_CUSTOM CONFIG_LV_USE_UEFI_CUSTOM
+            #else
+                #define LV_USE_UEFI_CUSTOM    0
+            #endif
+        #else
+            #define LV_USE_UEFI_CUSTOM    0
+        #endif
+    #endif
+#endif
+#if LV_USE_UEFI_CUSTOM
+        #ifdef LV_KCONFIG_PRESENT
+            #ifdef CONFIG_LV_UEFI_CUSTOM_INCLUDE_PATH
+                #define LV_UEFI_CUSTOM_INCLUDE_PATH CONFIG_LV_UEFI_CUSTOM_INCLUDE_PATH
+            #else
+                #define LV_UEFI_CUSTOM_INCLUDE_PATH    "myefi.h"
+            #endif
+        #else
+            #define LV_UEFI_CUSTOM_INCLUDE_PATH    "myefi.h"
+        #endif
 #endif
 
 /** Use OpenGL to open window on PC and handle mouse and keyboard */

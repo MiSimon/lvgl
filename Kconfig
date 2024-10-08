@@ -1866,6 +1866,16 @@ menu "LVGL configuration"
 			depends on LV_USE_UEFI
 			default n
 
+		config LV_USE_UEFI_CUSTOM
+			bool "Use custom header files"
+			depends on LV_USE_UEFI
+			default n
+
+		config LV_UEFI_CUSTOM_INCLUDE_PATH
+			string "UEFI custom include path"
+			depends on LV_USE_UEFI_CUSTOM
+			default "myefi.h"
+
 		config LV_USE_OPENGLES
 			bool "Use GLFW and OpenGL to open window on PC and handle mouse and keyboard"
 			default n

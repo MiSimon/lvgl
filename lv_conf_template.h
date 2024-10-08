@@ -1131,6 +1131,17 @@
 /** LVGL Windows backend */
 #define LV_USE_WINDOWS    0
 
+/** LVGL UEFI backend */
+#define LV_USE_UEFI 0
+#if LV_USE_UEFI
+    #define LV_USE_UEFI_EDK2    0   /**< Use headers from EDK2 */
+    #define LV_USE_UEFI_GNU_EFI    0    /**< Use headers from gnu-efi */
+    #define LV_USE_UEFI_CUSTOM  0   /**< Use custom headers */
+#endif
+#if LV_USE_UEFI_CUSTOM
+    #define LV_UEFI_CUSTOM_INCLUDE_PATH "myefi.h"   /**< Path to the custom UEFI header */
+#endif
+
 /** Use OpenGL to open window on PC and handle mouse and keyboard */
 #define LV_USE_OPENGLES   0
 #if LV_USE_OPENGLES
