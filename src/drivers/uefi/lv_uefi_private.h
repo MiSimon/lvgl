@@ -14,6 +14,9 @@ extern "C" {
 #if LV_USE_UEFI
 
 #include "lv_uefi.h"
+#include "lv_uefi_private_acpi.h"
+#include "lv_uefi_private_cpu.h"
+#include "lv_uefi_private_timer.h"
 
 /*********************
  *      DEFINES
@@ -92,7 +95,7 @@ bool lv_uefi_cpu_timer_is_supported();
 
 /**
  * @brief Get the current value of the cpu counter
- * @return The current value
+ * @return The current valuea
 */
 uint64_t lv_uefi_cpu_counter_get_value();
 

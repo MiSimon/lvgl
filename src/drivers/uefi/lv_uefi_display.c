@@ -116,7 +116,7 @@ void * lv_uefi_get_active_display()
     UINTN no_handles;
     UINTN index;
 
-    // The active display handle shall have EFI_GRAPHICS_OUTPUT_PROTOCOL and EFI_EDID_ACTIVE_PROTOCOL installed
+    // The active display handle should have EFI_GRAPHICS_OUTPUT_PROTOCOL and EFI_EDID_ACTIVE_PROTOCOL installed
     status = gLvEfiBS->LocateHandleBuffer(
                  ByProtocol,
                  &_uefi_guid_graphics_output,
@@ -154,7 +154,6 @@ void * lv_uefi_get_any_display()
     UINTN no_handles;
     UINTN index;
 
-    // The active display handle shall have EFI_GRAPHICS_OUTPUT_PROTOCOL and EFI_EDID_ACTIVE_PROTOCOL installed
     status = gLvEfiBS->LocateHandleBuffer(
                  ByProtocol,
                  &_uefi_guid_graphics_output,

@@ -12,6 +12,7 @@ extern "C" {
 #include "../../lvgl.h"
 
 #if LV_USE_UEFI
+
 #include "lv_uefi.h"
 
 /*********************
@@ -57,7 +58,7 @@ void lv_uefi_platform_deinit();
 
 /**
  * @brief Get the current millisecond value.
- * @return The value or 0xFFFFFFFF if the value is unknown.
+ * @return The value or MAX_UINT32 if the value is unknown.
 */
 uint32_t lv_uefi_get_milliseconds();
 

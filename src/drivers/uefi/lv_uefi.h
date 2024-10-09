@@ -83,6 +83,9 @@
     #if !defined(EFI_FILE_INFO_ID)
         #error Missing support for EFI_FILE_INFO
     #endif
+    #if !defined(EFI_TIMESTAMP_PROTOCOL_GUID)
+        #error Missing support for EFI_TIMESTAMP_PROTOCOL_GUID
+    #endif
 
     // Verify that all types have the correct size
     LV_UEFI_STATIC_ASSERT(sizeof(BOOLEAN)  == 1, "Size check for 'BOOLEAN' failed.");

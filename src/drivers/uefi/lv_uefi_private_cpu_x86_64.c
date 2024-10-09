@@ -2,7 +2,8 @@
  *      INCLUDES
  *********************/
 
-#include "lv_uefi_private.h"
+#include "lv_uefi_private_cpu.h"
+
 #if LV_USE_UEFI
 #if defined(__LV_UEFI_ARCH_X64__) || defined(__LV_UEFI_ARCH_X86__)
 

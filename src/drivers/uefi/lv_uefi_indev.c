@@ -9,6 +9,11 @@
 #include "../../misc/lv_text.h"
 #if LV_USE_UEFI
 
+#if LV_USE_UEFI_GNU_EFI
+// gnu-efi uses a type name that is different to the one in the specification 
+typedef EFI_SIMPLE_TEXT_IN_PROTOCOL EFI_SIMPLE_TEXT_INPUT_PROTOCOL;
+#endif
+
 /*********************
  *      DEFINES
  *********************/
