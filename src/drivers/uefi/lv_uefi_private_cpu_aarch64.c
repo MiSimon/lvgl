@@ -1,10 +1,18 @@
+/**
+ * @file lv_uefi_private_cpu_aarch64.c
+ *
+ */
+
 /*********************
  *      INCLUDES
  *********************/
 
-#include "lv_uefi_private_cpu.h"
+#include "../../lvgl.h"
 
 #if LV_USE_UEFI
+
+#include "lv_uefi_private.h"
+
 #if defined(__LV_UEFI_ARCH_AARCH64__)
 
 /*********************

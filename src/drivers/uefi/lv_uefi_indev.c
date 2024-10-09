@@ -1,17 +1,25 @@
+/**
+ * @file lv_uefi_indev.c
+ *
+ */
+
 /*********************
  *      INCLUDES
  *********************/
 
-#include "lv_uefi_indev.h"
-#include "lv_uefi_private.h"
+#include "../../lvgl.h"
 #include "../../stdlib/lv_mem.h"
 #include "../../misc/lv_types.h"
 #include "../../misc/lv_text.h"
+
 #if LV_USE_UEFI
 
+#include "lv_uefi_indev.h"
+#include "lv_uefi_private.h"
+
 #if LV_USE_UEFI_GNU_EFI
-// gnu-efi uses a type name that is different to the one in the specification 
-typedef EFI_SIMPLE_TEXT_IN_PROTOCOL EFI_SIMPLE_TEXT_INPUT_PROTOCOL;
+    // gnu-efi uses a type name that is different to the one in the specification
+    typedef EFI_SIMPLE_TEXT_IN_PROTOCOL EFI_SIMPLE_TEXT_INPUT_PROTOCOL;
 #endif
 
 /*********************
@@ -21,6 +29,7 @@ typedef EFI_SIMPLE_TEXT_IN_PROTOCOL EFI_SIMPLE_TEXT_INPUT_PROTOCOL;
 /**********************
  *      TYPEDEFS
  **********************/
+
 typedef struct _lv_uefi_pointer_context_t {
     EFI_HANDLE handle;
     BOOLEAN absolute;
@@ -586,4 +595,5 @@ static bool lv_uefi_absolute_pointer_interface_is_valid(const EFI_ABSOLUTE_POINT
     if(interface->Mode->AbsoluteMaxY <= interface->Mode->AbsoluteMinY) return FALSE;
     return TRUE;
 }
+
 #endif

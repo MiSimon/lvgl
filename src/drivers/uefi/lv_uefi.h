@@ -1,3 +1,8 @@
+/**
+ * @file lv_uefi.h
+ *
+ */
+
 #ifndef LV_UEFI_H
 #define LV_UEFI_H
 

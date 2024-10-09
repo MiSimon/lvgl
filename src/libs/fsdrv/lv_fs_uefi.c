@@ -1,5 +1,5 @@
 /**
- * @file lv_fs_win32.c
+ * @file lv_fs_uefi.c
  *
  */
 
@@ -7,12 +7,14 @@
  *      INCLUDES
  *********************/
 #include "../../../lvgl.h"
+
 #if defined(LV_USE_FS_UEFI) && defined(LV_USE_UEFI)
 
 #include "../../drivers/uefi/lv_uefi.h"
 #include "../../drivers/uefi/lv_uefi_private.h"
 
 #include "../../core/lv_global.h"
+
 /*********************
  *      DEFINES
  *********************/
@@ -28,8 +30,6 @@
         #endif
     #endif
 #endif
-
-#define MAX_PATH_LEN 256
 
 /**********************
  *      TYPEDEFS
@@ -198,7 +198,7 @@ static lv_fs_res_t lv_fs_uefi_close_cb(lv_fs_drv_t * drv, void * file_p)
     EFI_STATUS status;
     lv_uefi_fs_file_context_t * file_ctx = (lv_uefi_fs_file_context_t *)file_p;
 
-    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_NOT_EX;
+    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_INV_PARAM;
 
     status = file_ctx->interface->Close(file_ctx->interface);
     if(status != EFI_SUCCESS) return LV_FS_RES_HW_ERR;
@@ -214,7 +214,7 @@ static lv_fs_res_t lv_fs_uefi_read_cb(lv_fs_drv_t * drv, void * file_p, void * b
     lv_uefi_fs_file_context_t * file_ctx = (lv_uefi_fs_file_context_t *)file_p;
     UINTN buf_size = btr;
 
-    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_NOT_EX;
+    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_INV_PARAM;
 
     status = file_ctx->interface->Read(
                      file_ctx->interface,
@@ -233,7 +233,7 @@ static lv_fs_res_t lv_fs_uefi_write_cb(lv_fs_drv_t * drv, void * file_p, const v
     lv_uefi_fs_file_context_t * file_ctx = (lv_uefi_fs_file_context_t *)file_p;
     UINTN buf_size = btw;
 
-    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_NOT_EX;
+    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_INV_PARAM;
 
     status = file_ctx->interface->Write(
                      file_ctx->interface,
@@ -254,7 +254,7 @@ static lv_fs_res_t lv_fs_uefi_seek_cb(lv_fs_drv_t * drv, void * file_p, uint32_t
     lv_uefi_fs_file_context_t * file_ctx = (lv_uefi_fs_file_context_t *)file_p;
     UINT64 new_pos;
 
-    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_NOT_EX;
+    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_INV_PARAM;
 
     if(whence == LV_FS_SEEK_END) {
         status = file_ctx->interface->SetPosition(
@@ -303,7 +303,7 @@ static lv_fs_res_t lv_fs_uefi_tell_cb(lv_fs_drv_t * drv, void * file_p, uint32_t
     lv_uefi_fs_file_context_t * file_ctx = (lv_uefi_fs_file_context_t *)file_p;
     UINT64 pos;
 
-    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_NOT_EX;
+    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_INV_PARAM;
 
     status = file_ctx->interface->GetPosition(
                      file_ctx->interface,
@@ -441,8 +441,6 @@ static lv_fs_res_t lv_fs_uefi_dir_read_cb(lv_fs_drv_t * drv, void * rddir_p, cha
 
     lv_fs_uefi_uefi_path_to_lvgl_path(info->FileName);
 
-    fn_ucs2 = info->FileName;
-
     // skip leading \ and /
     for(fn_ucs2 = info->FileName; *fn_ucs2 != L'\0'; fn_ucs2++) {
         if(*fn_ucs2 != L'\\' && *fn_ucs2 != L'/') {
@@ -456,18 +454,14 @@ static lv_fs_res_t lv_fs_uefi_dir_read_cb(lv_fs_drv_t * drv, void * rddir_p, cha
             goto error;
         }
         fn[0] = '/';
-        if(lv_uefi_ucs2_to_ascii(fn_ucs2, fn + 1, fn_len - 1) == 0) {
-            LV_LOG_WARN("[lv_uefi] Unable to convert the UCS-2 path into an ascii path.");
-            return_code = LV_FS_RES_UNKNOWN;
-            goto error;
-        }
+        fn++;
+        fn_len--;
     }
-    else {
-        if(lv_uefi_ucs2_to_ascii(fn_ucs2, fn, fn_len) == 0) {
-            LV_LOG_WARN("[lv_uefi] Unable to convert the UCS-2 path into an ascii path.");
-            return_code = LV_FS_RES_UNKNOWN;
-            goto error;
-        }
+
+    if(lv_uefi_ucs2_to_ascii(fn_ucs2, fn, fn_len) == 0) {
+        LV_LOG_WARN("[lv_uefi] Unable to convert the UCS-2 path into an ascii path.");
+        return_code = LV_FS_RES_UNKNOWN;
+        goto error;
     }
 
     return_code = LV_FS_RES_OK;
@@ -486,7 +480,7 @@ static lv_fs_res_t lv_fs_uefi_dir_close_cb(lv_fs_drv_t * drv, void * rddir_p)
     EFI_STATUS status;
     lv_uefi_fs_file_context_t * file_ctx = (lv_uefi_fs_file_context_t *)rddir_p;
 
-    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_NOT_EX;
+    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_INV_PARAM;
 
     status = file_ctx->interface->Close(file_ctx->interface);
     if(status != EFI_SUCCESS) return LV_FS_RES_HW_ERR;

@@ -1,9 +1,18 @@
+/**
+ * @file lv_uefi_private_timer.c
+ *
+ */
+
 /*********************
  *      INCLUDES
  *********************/
 
-#include "lv_uefi_private.h"
+#include "../../lvgl.h"
+#include "../../core/lv_global.h"
+
 #if LV_USE_UEFI
+
+#include "lv_uefi_private.h"
 
 /*********************
  *      DEFINES
@@ -13,38 +22,13 @@
  *      TYPEDEFS
  **********************/
 
-typedef enum {
-    LV_UEFI_TIME_SOURCE_UNKNOWN = 0,
-    LV_UEFI_TIME_SOURCE_TIMESTAMP_PROTOCOL,
-    LV_UEFI_TIME_SOURCE_HPET,
-    LV_UEFI_TIME_SOURCE_ACPI,
-    LV_UEFI_TIME_SOURCE_CPU,
-} lv_uefi_time_source_t;
-
-typedef struct _lv_uefi_timer_context_t {
-    lv_uefi_time_source_t source;
-    uint64_t tick_value;
-    uint64_t last_value;
-    struct {
-        uint64_t max_value;
-        uint64_t frequency;
-    } meta;
-    union {
-        struct {
-            EFI_TIMESTAMP_PROTOCOL * interface;
-        } timestamp_protocol;
-        struct {
-            uint64_t * main_counter_value_register;
-        } hpet;
-        struct {
-            uint32_t * timer_address;
-        } acpi;
-    } source_meta;
-} lv_uefi_timer_context_t;
-
 #pragma pack(push, 1)
 
-// HPET 1.0a: 2.3.1 Register Overview
+/**
+ * HPET 1.0a: 2.3.1 Register Overview
+ *
+ * @see https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
+ */
 typedef struct _lv_uefi_hpet_register_t {
     uint64_t capabilities;
     uint64_t reserved1;
@@ -101,8 +85,6 @@ static EFI_GUID _uefi_guid_timestamp = EFI_TIMESTAMP_PROTOCOL_GUID;
 static lv_uefi_acpi_table_signature_t _uefi_acpi_signature_hpet = {{'H', 'P', 'E', 'T'}};
 static lv_uefi_acpi_table_signature_t _uefi_acpi_signature_fadt = {{'F', 'A', 'C', 'P'}};
 
-static lv_uefi_timer_context_t _uefi_timer_context;
-
 /**********************
  *      MACROS
  **********************/
@@ -118,29 +100,26 @@ static lv_uefi_timer_context_t _uefi_timer_context;
 */
 bool lv_uefi_timer_get_state(lv_uefi_timer_state_t * state)
 {
+    lv_uefi_timer_context_t * timer_ctx = &(LV_GLOBAL_DEFAULT()->uefi_timer_ctx);
     uint64_t current_value;
 
     LV_ASSERT_NULL(state);
 
     lv_memset(state, 0x00, sizeof(lv_uefi_timer_state_t));
 
-    if(_uefi_timer_context.source == LV_UEFI_TIME_SOURCE_UNKNOWN) {
-        return FALSE;
-    }
-    
-    switch(_uefi_timer_context.source) {
+    switch(timer_ctx->source) {
         case LV_UEFI_TIME_SOURCE_TIMESTAMP_PROTOCOL:
-            current_value = _uefi_timer_context.source_meta.timestamp_protocol.interface->GetTimestamp();
+            current_value = timer_ctx->source_meta.timestamp_protocol.interface->GetTimestamp();
             break;
         case LV_UEFI_TIME_SOURCE_HPET:
-            current_value = *_uefi_timer_context.source_meta.hpet.main_counter_value_register;
+            current_value = *(timer_ctx->source_meta.hpet.main_counter_value_register);
             // check if the timer is running in 32 bit mode and has rolled over
-            if(current_value < _uefi_timer_context.last_value && _uefi_timer_context.last_value < UINT32_MAX) {
-                current_value += UINT32_MAX - _uefi_timer_context.last_value + 1;
+            if(current_value < timer_ctx->last_value && timer_ctx->last_value < UINT32_MAX) {
+                current_value += UINT32_MAX - timer_ctx->last_value + 1;
             }
             break;
         case LV_UEFI_TIME_SOURCE_ACPI:
-            current_value = (uint64_t) * _uefi_timer_context.source_meta.acpi.timer_address;
+            current_value = (uint64_t) * timer_ctx->source_meta.acpi.timer_address;
             break;
         case LV_UEFI_TIME_SOURCE_CPU:
             current_value = lv_uefi_cpu_counter_get_value();
@@ -150,14 +129,14 @@ bool lv_uefi_timer_get_state(lv_uefi_timer_state_t * state)
     }
 
     // check if the timer has rolled over
-    if(current_value < _uefi_timer_context.last_value) {
-        current_value += _uefi_timer_context.meta.max_value - _uefi_timer_context.last_value + 1;
+    if(current_value < timer_ctx->last_value) {
+        current_value += timer_ctx->meta.max_value - timer_ctx->last_value + 1;
     }
-    _uefi_timer_context.tick_value += current_value - _uefi_timer_context.last_value;
-    _uefi_timer_context.last_value = current_value;
+    timer_ctx->tick_value += current_value - timer_ctx->last_value;
+    timer_ctx->last_value = current_value;
 
-    state->counter_value = _uefi_timer_context.tick_value;
-    state->frequency = _uefi_timer_context.meta.frequency;
+    state->counter_value = timer_ctx->tick_value;
+    state->frequency = timer_ctx->meta.frequency;
 
     return TRUE;
 }
@@ -166,24 +145,26 @@ bool lv_uefi_timer_get_state(lv_uefi_timer_state_t * state)
  * @brief Initialize the timer context
 */
 void lv_uefi_timer_init()
-{    
-    lv_memset(&_uefi_timer_context, 0x00, sizeof(lv_uefi_timer_context_t));
+{
+    lv_uefi_timer_context_t * timer_ctx = &(LV_GLOBAL_DEFAULT()->uefi_timer_ctx);
+
+    lv_memset(timer_ctx, 0x00, sizeof(lv_uefi_timer_context_t));
 
     LV_LOG_INFO("Trying to find the timestamp protocol.");
-    if(lv_uefi_timer_init_timestamp_protocol(&_uefi_timer_context))
+    if(lv_uefi_timer_init_timestamp_protocol(timer_ctx))
         return;
     LV_LOG_INFO("Trying to find the CPU timer.");
-    if(lv_uefi_timer_init_cpu(&_uefi_timer_context))
+    if(lv_uefi_timer_init_cpu(timer_ctx))
         return;
     LV_LOG_INFO("Trying to find the HPET timer.");
-    if(lv_uefi_timer_init_hpet(&_uefi_timer_context))
+    if(lv_uefi_timer_init_hpet(timer_ctx))
         return;
     LV_LOG_INFO("Trying to find the ACPI timer.");
-    if(lv_uefi_timer_init_acpi(&_uefi_timer_context))
+    if(lv_uefi_timer_init_acpi(timer_ctx))
         return;
     LV_LOG_WARN("No timer available.");
 
-    lv_memset(&_uefi_timer_context, 0x00, sizeof(lv_uefi_timer_context_t));
+    lv_memset(timer_ctx, 0x00, sizeof(lv_uefi_timer_context_t));
 }
 
 /**
@@ -191,24 +172,26 @@ void lv_uefi_timer_init()
 */
 void lv_uefi_timer_deinit()
 {
-    switch(_uefi_timer_context.source) {   
+    lv_uefi_timer_context_t * timer_ctx = &(LV_GLOBAL_DEFAULT()->uefi_timer_ctx);
+
+    switch(timer_ctx->source) {
         case LV_UEFI_TIME_SOURCE_TIMESTAMP_PROTOCOL:
-            lv_uefi_timer_deinit_timestamp_protocol(&_uefi_timer_context);
+            lv_uefi_timer_deinit_timestamp_protocol(timer_ctx);
             break;
         case LV_UEFI_TIME_SOURCE_HPET:
-            lv_uefi_timer_deinit_hpet(&_uefi_timer_context);
+            lv_uefi_timer_deinit_hpet(timer_ctx);
             break;
         case LV_UEFI_TIME_SOURCE_ACPI:
-            lv_uefi_timer_deinit_acpi(&_uefi_timer_context);
+            lv_uefi_timer_deinit_acpi(timer_ctx);
             break;
         case LV_UEFI_TIME_SOURCE_CPU:
-            lv_uefi_timer_deinit_cpu(&_uefi_timer_context);
+            lv_uefi_timer_deinit_cpu(timer_ctx);
             break;
         default:
             break;
     }
 
-    lv_memset(&_uefi_timer_context, 0x00, sizeof(lv_uefi_timer_context_t));
+    lv_memset(timer_ctx, 0x00, sizeof(lv_uefi_timer_context_t));
 }
 
 /**********************

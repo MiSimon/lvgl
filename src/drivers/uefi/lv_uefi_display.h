@@ -1,3 +1,8 @@
+/**
+ * @file lv_uefi_display.h
+ *
+ */
+
 #ifndef __LV_UEFI_DISPLAY_H__
 #define __LV_UEFI_DISPLAY_H__
 

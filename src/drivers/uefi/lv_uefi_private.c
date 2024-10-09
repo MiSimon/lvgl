@@ -1,9 +1,17 @@
+/**
+ * @file lv_uefi_private.c
+ *
+ */
+
 /*********************
  *      INCLUDES
  *********************/
 
-#include "lv_uefi_private.h"
+#include "../../lvgl.h"
+
 #if LV_USE_UEFI
+
+#include "lv_uefi_private.h"
 
 /*********************
  *      DEFINES

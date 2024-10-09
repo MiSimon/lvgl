@@ -1,3 +1,8 @@
+/**
+ * @file lv_uefi_private.h
+ *
+ */
+
 #ifndef __LV_UEFI_PRIVATE_H__
 #define __LV_UEFI_PRIVATE_H__
 
@@ -29,6 +34,23 @@ extern "C" {
 /**********************
  * GLOBAL PROTOTYPES
  **********************/
+
+/**
+ * Internal cache for the image handle (source: efi_main)
+ */
+extern EFI_HANDLE gLvEfiImageHandle;
+/**
+ * Internal cache for the system table (source: efi_main)
+ */
+extern EFI_SYSTEM_TABLE * gLvEfiST;
+/**
+ * Internal cache for the boot services table (source: gLvEfiST)
+ */
+extern EFI_BOOT_SERVICES * gLvEfiBS;
+/**
+ * Internal cache for the boot runtime service table (source: gLvEfiST)
+ */
+extern EFI_RUNTIME_SERVICES * gLvEfiRT;
 
 /**
  * @brief Test if a protocol is installed at a handle.
@@ -86,24 +108,6 @@ size_t lv_uefi_ascii_to_ucs2(
     const char * ascii,
     CHAR16 * ucs2,
     size_t ucs2_len);
-
-/**
- * @brief Check if there is a cpu counter available that can be used as time source
- * @return True if such a counter exists, false if not
-*/
-bool lv_uefi_cpu_timer_is_supported();
-
-/**
- * @brief Get the current value of the cpu counter
- * @return The current valuea
-*/
-uint64_t lv_uefi_cpu_counter_get_value();
-
-/**
- * @brief Get the frequency in Hz
- * @return The frequency in Hz
-*/
-uint64_t lv_uefi_cpu_timer_get_frequency();
 
 /**********************
  *      MACROS

@@ -1,3 +1,8 @@
+/**
+ * @file lv_uefi_context.h
+ *
+ */
+
 #ifndef __LV_UEFI_CONTEXT_H__
 #define __LV_UEFI_CONTEXT_H__
 
@@ -27,13 +32,10 @@ extern "C" {
  * GLOBAL PROTOTYPES
  **********************/
 
-extern EFI_HANDLE gLvEfiImageHandle;
-extern EFI_SYSTEM_TABLE * gLvEfiST;
-extern EFI_BOOT_SERVICES * gLvEfiBS;
-extern EFI_RUNTIME_SERVICES * gLvEfiRT;
-
 /**
  * @brief Initialize the UEFI chache variables.
+ * @param image_handle The handle of the current image
+ * @param system_table Pointer to the system table
  * @remark This has to be called before lv_init().
 */
 void lv_uefi_init(

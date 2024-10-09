@@ -1,3 +1,8 @@
+/**
+ * @file lv_uefi_private_acpi.h
+ *
+ */
+
 #ifndef __LV_UEFI_PRIVATE_ACPI_H__
 #define __LV_UEFI_PRIVATE_ACPI_H__
 
@@ -25,12 +30,20 @@ extern "C" {
 
 #pragma pack(push, 1)
 
-// ACPI 6.5: 5.2.6. System Description Table Header
+/**
+ * ACPI 6.5: 5.2.6. System Description Table Header
+ *
+ * @see https://uefi.org/specs/ACPI/6.5/
+ */
 typedef struct _lv_uefi_acpi_table_signature_t {
     char signature[4];
 } lv_uefi_acpi_table_signature_t;
 
-// ACPI 6.5: 5.2.3.2. Generic Address Structure
+/**
+ * ACPI 6.5: 5.2.3.2. Generic Address Structure
+ *
+ * @see https://uefi.org/specs/ACPI/6.5/
+ */
 typedef struct _lv_uefi_acpi_address_t {
     uint8_t address_space_id;
     uint8_t register_bit_width;
@@ -39,7 +52,11 @@ typedef struct _lv_uefi_acpi_address_t {
     uint64_t address;
 } lv_uefi_acpi_address_t;
 
-// ACPI 6.5: 5.2.6. System Description Table Header
+/**
+ * ACPI 6.5: 5.2.6. System Description Table Header
+ *
+ * @see https://uefi.org/specs/ACPI/6.5/
+ */
 typedef struct _lv_uefi_acpi_table_header_t {
     lv_uefi_acpi_table_signature_t signature;
     uint32_t length;
@@ -52,7 +69,11 @@ typedef struct _lv_uefi_acpi_table_header_t {
     uint32_t creator_revision;
 } lv_uefi_acpi_table_header_t;
 
-// ACPI 6.5: 5.2.5.3. Root System Description Pointer (RSDP) Structure
+/**
+ * ACPI 6.5: 5.2.5.3. Root System Description Pointer (RSDP) Structure
+ *
+ * @see https://uefi.org/specs/ACPI/6.5/
+ */
 typedef struct _lv_uefi_acpi_rsdp_t {
     char signature[8];
     uint8_t checksum;
@@ -67,20 +88,28 @@ typedef struct _lv_uefi_acpi_rsdp_t {
 } lv_uefi_acpi_rsdp_t;
 
 #ifdef offsetof
-    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_rsdp_t, xsdt_address) == 24, "Invalid RSDP structure");
+LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_rsdp_t, xsdt_address) == 24, "Invalid RSDP structure");
 #endif
 
-// ACPI 6.5: 5.2.8. Extended System Description Table (XSDT)
+/**
+ * ACPI 6.5: 5.2.8. Extended System Description Table (XSDT)
+ *
+ * @see https://uefi.org/specs/ACPI/6.5/
+ */
 typedef struct _lv_uefi_acpi_table_xsdt_t {
     lv_uefi_acpi_table_header_t header;
     lv_uefi_acpi_table_header_t * entries[0];
 } lv_uefi_acpi_table_xsdt_t;
 
 #ifdef offsetof
-    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_xsdt_t, entries) == 36, "Invalid XSDT structure");
+LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_xsdt_t, entries) == 36, "Invalid XSDT structure");
 #endif
 
-// ACPI 6.5: 5.2.9. Fixed ACPI Description Table (FADT)
+/**
+ * ACPI 6.5: 5.2.9. Fixed ACPI Description Table (FADT)
+ *
+ * @see https://uefi.org/specs/ACPI/6.5/
+ */
 typedef struct _lv_uefi_acpi_table_fadt_t {
     lv_uefi_acpi_table_header_t header;
     uint32_t firmware_ctrl;
@@ -138,13 +167,17 @@ typedef struct _lv_uefi_acpi_table_fadt_t {
 } lv_uefi_acpi_table_fadt_t;
 
 #ifdef offsetof
-    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, pm_timer_block) == 76, "Invalid FADT structure");
-    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, pm_timer_length) == 91, "Invalid FADT structure");
-    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, flags) == 112, "Invalid FADT structure");
-    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, x_pm_timer_block) == 208, "Invalid FADT structure");
+LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, pm_timer_block) == 76, "Invalid FADT structure");
+LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, pm_timer_length) == 91, "Invalid FADT structure");
+LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, flags) == 112, "Invalid FADT structure");
+LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_fadt_t, x_pm_timer_block) == 208, "Invalid FADT structure");
 #endif
 
-// HPET 1.0a: 3.2.4 The ACPI 2.0 HPET Description Table (HPET)
+/**
+ * HPET 1.0a: 3.2.4 The ACPI 2.0 HPET Description Table (HPET)
+ *
+ * @see https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
+ */
 typedef struct _lv_uefi_acpi_table_hpet_t {
     lv_uefi_acpi_table_header_t header;
     uint32_t event_timer_block_id;
@@ -155,7 +188,7 @@ typedef struct _lv_uefi_acpi_table_hpet_t {
 } lv_uefi_acpi_table_hpet_t;
 
 #ifdef offsetof
-    LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_hpet_t, address) == 40, "Invalid HPET structure");
+LV_UEFI_STATIC_ASSERT(offsetof(lv_uefi_acpi_table_hpet_t, address) == 40, "Invalid HPET structure");
 #endif
 
 #pragma pack(pop)

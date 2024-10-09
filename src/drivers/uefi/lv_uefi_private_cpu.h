@@ -1,3 +1,8 @@
+/**
+ * @file lv_uefi_private_cpu.h
+ *
+ */
+
 #ifndef __LV_UEFI_PRIVATE_CPU_H__
 #define __LV_UEFI_PRIVATE_CPU_H__
 
