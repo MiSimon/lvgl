@@ -46,6 +46,13 @@ typedef struct _lv_uefi_fs_file_context_t {
 static void lv_fs_drv_uefi_init(lv_fs_drv_t * drv, char fs_drive_letter, EFI_HANDLE fs_handle);
 static void lv_fs_drv_uefi_deinit(lv_fs_drv_t * drv);
 
+static void lv_fs_uefi_lvgl_path_to_uefi_path(CHAR16 * path);
+static void lv_fs_uefi_uefi_path_to_lvgl_path(CHAR16 * path);
+static bool lv_fs_uefi_is_dot_path(CONST CHAR16 * path);
+static bool lv_fs_uefi_is_dir(EFI_FILE_PROTOCOL * dir);
+static bool lv_fs_uefi_is_file(EFI_FILE_PROTOCOL * file);
+static EFI_FILE_INFO * lv_fs_uefi_get_info(EFI_FILE_PROTOCOL * file);
+
 static bool lv_fs_uefi_ready_cb(lv_fs_drv_t * drv);
 
 static void * lv_fs_uefi_open_cb(lv_fs_drv_t * drv, const char * path, lv_fs_mode_t mode);
@@ -65,6 +72,7 @@ static lv_fs_res_t lv_fs_uefi_dir_close_cb(lv_fs_drv_t * drv, void * rddir_p);
 
 static EFI_GUID _uefi_guid_simple_file_system = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
 static EFI_GUID _uefi_guid_loaded_image = EFI_LOADED_IMAGE_PROTOCOL_GUID;
+static EFI_GUID _uefi_guid_file_info = EFI_FILE_INFO_ID;
 
 /**********************
  *      MACROS
@@ -142,6 +150,8 @@ static void * lv_fs_uefi_open_cb(lv_fs_drv_t * drv, const char * path, lv_fs_mod
         goto error;
     }
 
+    lv_fs_uefi_lvgl_path_to_uefi_path(path_ucs2);
+
     file_ctx = lv_calloc(1, sizeof(lv_uefi_fs_file_context_t));
     LV_ASSERT_MALLOC(file_ctx);
 
@@ -159,7 +169,11 @@ static void * lv_fs_uefi_open_cb(lv_fs_drv_t * drv, const char * path, lv_fs_mod
                  uefi_mode,
                  0);
     if(status != EFI_SUCCESS) {
-        LV_LOG_WARN("[lv_uefi] Unable to open file.");
+        LV_LOG_WARN("[lv_uefi] Unable to open file '%s'.", path);
+        goto error;
+    }
+
+    if(!lv_fs_uefi_is_file(file_ctx->interface)) {
         goto error;
     }
 
@@ -327,10 +341,18 @@ static void * lv_fs_uefi_dir_open_cb(lv_fs_drv_t * drv, const char * path)
         goto error;
     }
 
-    if(lv_uefi_ascii_to_ucs2(path, path_ucs2, LV_FS_MAX_PATH_LENGTH + 1) == 0) {
-        LV_LOG_WARN("[lv_uefi] Unable to convert the ASCII path into an UCS-2 path.");
-        goto error;
+    if(path != NULL && path[0] != '\0') {
+        if(lv_uefi_ascii_to_ucs2(path, path_ucs2, LV_FS_MAX_PATH_LENGTH + 1) == 0) {
+            LV_LOG_WARN("[lv_uefi] Unable to convert the ASCII path into an UCS-2 path.");
+            goto error;
+        }
     }
+    else {
+        path_ucs2[0] = '\\';
+        path_ucs2[1] = '\0';
+    }
+
+    lv_fs_uefi_lvgl_path_to_uefi_path(path_ucs2);
 
     file_ctx = lv_calloc(1, sizeof(lv_uefi_fs_file_context_t));
     LV_ASSERT_MALLOC(file_ctx);
@@ -345,7 +367,11 @@ static void * lv_fs_uefi_dir_open_cb(lv_fs_drv_t * drv, const char * path)
                  mode,
                  attributes);
     if(status != EFI_SUCCESS) {
-        LV_LOG_WARN("[lv_uefi] Unable to open directory.");
+        LV_LOG_WARN("[lv_uefi] Unable to open directory '%s'.", path);
+        goto error;
+    }
+
+    if(!lv_fs_uefi_is_dir(file_ctx->interface)) {
         goto error;
     }
 
@@ -376,34 +402,72 @@ static lv_fs_res_t lv_fs_uefi_dir_read_cb(lv_fs_drv_t * drv, void * rddir_p, cha
     EFI_FILE_INFO * info = NULL;
     UINTN size;
 
-    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_NOT_EX;
+    CONST CHAR16 * fn_ucs2;
 
-    size = 0;
-    status = file_ctx->interface->Read(
-                     file_ctx->interface,
-                     &size,
-                     info);
-    if(status != EFI_BUFFER_TOO_SMALL || size == 0) {
-        return_code = LV_FS_RES_NOT_EX;
-        goto error;
+    if(fn == NULL || fn_len == 0) return LV_FS_RES_INV_PARAM;
+    if(file_ctx == NULL || file_ctx->interface == NULL) return LV_FS_RES_INV_PARAM;
+
+    // skip . and ..
+    do {
+        if(info != NULL) lv_free(info);
+        info = NULL;
+        size = 0;
+        status = file_ctx->interface->Read(
+                         file_ctx->interface,
+                         &size,
+                         info);
+        if(status == EFI_SUCCESS && size == 0) {
+            return_code = LV_FS_RES_OK;
+            *fn = '\0';
+            goto finish;
+        }
+        else if(status != EFI_BUFFER_TOO_SMALL) {
+            return_code = LV_FS_RES_NOT_EX;
+            goto error;
+        }
+
+        info = lv_calloc(1, size);
+        LV_ASSERT_MALLOC(info);
+
+        status = file_ctx->interface->Read(
+                         file_ctx->interface,
+                         &size,
+                         info);
+        if(status != EFI_SUCCESS) {
+            return_code = LV_FS_RES_HW_ERR;
+            goto error;
+        }
+    } while(lv_fs_uefi_is_dot_path(info->FileName));
+
+    lv_fs_uefi_uefi_path_to_lvgl_path(info->FileName);
+
+    fn_ucs2 = info->FileName;
+
+    // skip leading \ and /
+    for(fn_ucs2 = info->FileName; *fn_ucs2 != L'\0'; fn_ucs2++) {
+        if(*fn_ucs2 != L'\\' && *fn_ucs2 != L'/') {
+            break;
+        }
     }
 
-    info = lv_calloc(1, size);
-    LV_ASSERT_MALLOC(info);
-
-    status = file_ctx->interface->Read(
-                     file_ctx->interface,
-                     &size,
-                     info);
-    if(status != EFI_SUCCESS) {
-        return_code = LV_FS_RES_HW_ERR;
-        goto error;
+    if((info->Attribute & EFI_FILE_DIRECTORY) != 0) {
+        if(fn_len == 0) {
+            return_code = LV_FS_RES_UNKNOWN;
+            goto error;
+        }
+        fn[0] = '/';
+        if(lv_uefi_ucs2_to_ascii(fn_ucs2, fn + 1, fn_len - 1) == 0) {
+            LV_LOG_WARN("[lv_uefi] Unable to convert the UCS-2 path into an ascii path.");
+            return_code = LV_FS_RES_UNKNOWN;
+            goto error;
+        }
     }
-
-    if(lv_uefi_ucs2_to_ascii(info->FileName, fn, fn_len) == 0) {
-        LV_LOG_WARN("[lv_uefi] Unable to convert the UCS-2 path into an ascii path.");
-        return_code = LV_FS_RES_UNKNOWN;
-        goto error;
+    else {
+        if(lv_uefi_ucs2_to_ascii(fn_ucs2, fn, fn_len) == 0) {
+            LV_LOG_WARN("[lv_uefi] Unable to convert the UCS-2 path into an ascii path.");
+            return_code = LV_FS_RES_UNKNOWN;
+            goto error;
+        }
     }
 
     return_code = LV_FS_RES_OK;
@@ -469,6 +533,85 @@ static void lv_fs_drv_uefi_deinit(lv_fs_drv_t * drv)
 {
     LV_ASSERT_NULL(drv);
     drv->user_data = NULL;
+}
+
+static void lv_fs_uefi_lvgl_path_to_uefi_path(CHAR16 * path)
+{
+    if(path == NULL) return;
+
+    for(; *path != '\0'; path++) {
+        if(*path == L'/') *path = L'\\';
+    }
+}
+
+static void lv_fs_uefi_uefi_path_to_lvgl_path(CHAR16 * path)
+{
+    if(path == NULL) return;
+
+    for(; *path != '\0'; path++) {
+        if(*path == L'\\') *path = L'/';
+    }
+}
+
+static bool lv_fs_uefi_is_dot_path(CONST CHAR16 * path)
+{
+    if(path == NULL) return FALSE;
+
+    if(path[0] == L'.' && path[1] == L'\0') return TRUE;
+    if(path[0] == L'.' && path[1] == L'.' && path[2] == L'\0') return TRUE;
+
+    return FALSE;
+}
+
+static bool lv_fs_uefi_is_dir(EFI_FILE_PROTOCOL * dir)
+{
+    UINT64 attributes;
+
+    if(dir == NULL) return FALSE;
+
+    EFI_FILE_INFO * info = lv_fs_uefi_get_info(dir);
+    if(info == NULL) return FALSE;
+
+    attributes = info->Attribute;
+    lv_free(info);
+
+    return (attributes & EFI_FILE_DIRECTORY) != 0;
+}
+
+static bool lv_fs_uefi_is_file(EFI_FILE_PROTOCOL * file)
+{
+    UINT64 attributes;
+
+    if(file == NULL) return FALSE;
+
+    EFI_FILE_INFO * info = lv_fs_uefi_get_info(file);
+    if(info == NULL) return FALSE;
+
+    attributes = info->Attribute;
+    lv_free(info);
+
+    return (attributes & EFI_FILE_DIRECTORY) == 0;
+}
+
+static EFI_FILE_INFO * lv_fs_uefi_get_info(EFI_FILE_PROTOCOL * file)
+{
+    EFI_STATUS status;
+    EFI_FILE_INFO * info = NULL;
+    UINTN size = 0;
+
+    status = file->GetInfo(file, &_uefi_guid_file_info, &size, info);
+    if(status != EFI_BUFFER_TOO_SMALL) return NULL;
+
+    info = lv_calloc(1, size);
+    LV_ASSERT_MALLOC(info);
+
+    status = file->GetInfo(file, &_uefi_guid_file_info, &size, info);
+    if(status != EFI_SUCCESS) {
+        lv_free(info);
+        return NULL;
+    }
+
+    return info;
 }
 
 #else /* LV_FS_UEFI_LETTER == 0*/
