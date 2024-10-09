@@ -85,9 +85,9 @@ static uint64_t lv_uefi_cpu_read_cntvct_el0()
 
 static uint64_t lv_uefi_cpu_read_cntfrq_el0()
 {
-    uint64_t cntvtel0;
-    __asm__ __volatile__("mrs %0, cntfrq_el0" : "=r"(cntvtel0));
-    return cntvtel0;
+    uint64_t cntfrq_el0;
+    __asm__ __volatile__("mrs %0, cntfrq_el0" : "=r"(cntfrq_el0));
+    return cntfrq_el0;
 }
 
 #else

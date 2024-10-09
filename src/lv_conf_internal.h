@@ -2602,6 +2602,24 @@
     #endif
 #endif
 
+/** API for CreateFile, ReadFile, etc. */
+#ifndef LV_USE_FS_UEFI
+    #ifdef CONFIG_LV_USE_FS_UEFI
+        #define LV_USE_FS_UEFI CONFIG_LV_USE_FS_UEFI
+    #else
+        #define LV_USE_FS_UEFI 0
+    #endif
+#endif
+#if LV_USE_FS_UEFI
+    #ifndef LV_FS_UEFI_LETTER
+        #ifdef CONFIG_LV_FS_UEFI_LETTER
+            #define LV_FS_UEFI_LETTER CONFIG_LV_FS_UEFI_LETTER
+        #else
+            #define LV_FS_UEFI_LETTER '\0'     /**< Set an upper cased letter on which the drive will accessible (e.g. 'A') */
+        #endif
+    #endif
+#endif
+
 /** LODEPNG decoder library */
 #ifndef LV_USE_LODEPNG
     #ifdef CONFIG_LV_USE_LODEPNG

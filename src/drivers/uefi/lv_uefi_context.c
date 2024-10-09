@@ -4,7 +4,6 @@
 
 #include "lv_uefi_context.h"
 #include "lv_uefi_private.h"
-#include "lv_uefi_fs.h"
 #if LV_USE_UEFI
 
 /*********************
@@ -277,7 +276,6 @@ void lv_uefi_platform_init()
 
 void lv_uefi_platform_deinit()
 {
-    lv_fs_uefi_deinit();
     lv_uefi_timer_deinit();
 }
 
