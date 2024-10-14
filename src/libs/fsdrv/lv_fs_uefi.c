@@ -10,7 +10,6 @@
 
 #if defined(LV_USE_FS_UEFI) && defined(LV_USE_UEFI)
 
-#include "../../drivers/uefi/lv_uefi.h"
 #include "../../drivers/uefi/lv_uefi_private.h"
 
 #include "../../core/lv_global.h"
@@ -95,14 +94,14 @@ void lv_fs_uefi_init(void)
      * Register the file system interface in LVGL
      *--------------------------------------------------*/
 
-    interface_loaded_image = lv_uefi_open_protocol(gLvEfiImageHandle, &_uefi_guid_loaded_image);
+    interface_loaded_image = lv_uefi_protocol_open(gLvEfiImageHandle, &_uefi_guid_loaded_image);
     LV_ASSERT_NULL(interface_loaded_image);
 
     fs_handle = interface_loaded_image->DeviceHandle;
 
     if(fs_handle == NULL) return;
 
-    lv_uefi_close_protocol(gLvEfiImageHandle, &_uefi_guid_loaded_image);
+    lv_uefi_protocol_close(gLvEfiImageHandle, &_uefi_guid_loaded_image);
 
     /*Add a simple driver to open images*/
     lv_fs_drv_t * fs_drv_p = &(LV_GLOBAL_DEFAULT()->uefi_fs_drv);
@@ -133,7 +132,7 @@ static void * lv_fs_uefi_open_cb(lv_fs_drv_t * drv, const char * path, lv_fs_mod
 
     EFI_HANDLE fs_handle = (EFI_HANDLE)drv->user_data;
 
-    fs_interface = lv_uefi_open_protocol(fs_handle, &_uefi_guid_simple_file_system);
+    fs_interface = lv_uefi_protocol_open(fs_handle, &_uefi_guid_simple_file_system);
     if(fs_interface == NULL) {
         LV_LOG_WARN("[lv_uefi] Unable to open file system protocol.");
         goto error;
@@ -187,7 +186,7 @@ error:
     }
 
 finish:
-    if(fs_interface != NULL) lv_uefi_close_protocol(fs_handle, &_uefi_guid_simple_file_system);
+    if(fs_interface != NULL) lv_uefi_protocol_close(fs_handle, &_uefi_guid_simple_file_system);
     if(fs_root != NULL) fs_root->Close(fs_root);
 
     return file_ctx;
@@ -329,7 +328,7 @@ static void * lv_fs_uefi_dir_open_cb(lv_fs_drv_t * drv, const char * path)
 
     EFI_HANDLE fs_handle = (EFI_HANDLE)drv->user_data;
 
-    fs_interface = lv_uefi_open_protocol(fs_handle, &_uefi_guid_simple_file_system);
+    fs_interface = lv_uefi_protocol_open(fs_handle, &_uefi_guid_simple_file_system);
     if(fs_interface == NULL) {
         LV_LOG_WARN("[lv_uefi] Unable to open file system protocol.");
         goto error;
@@ -387,7 +386,7 @@ error:
     }
 
 finish:
-    if(fs_interface != NULL) lv_uefi_close_protocol(fs_handle, &_uefi_guid_simple_file_system);
+    if(fs_interface != NULL) lv_uefi_protocol_close(fs_handle, &_uefi_guid_simple_file_system);
     if(fs_root != NULL) fs_root->Close(fs_root);
 
     return file_ctx;

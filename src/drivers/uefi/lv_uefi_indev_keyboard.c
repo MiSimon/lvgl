@@ -47,8 +47,8 @@ typedef struct _lv_uefi_simple_text_input_context_t {
  *  STATIC PROTOTYPES
  **********************/
 
-static void _event_cb(lv_event_t * e);
-static void _read_cb(lv_indev_t * indev, lv_indev_data_t * data);
+static void _simple_text_input_event_cb(lv_event_t * e);
+static void _simple_text_input_read_cb(lv_indev_t * indev, lv_indev_data_t * data);
 
 static void _simple_text_input_handle_context_free(void * ptr);
 static void _simple_text_input_context_free(lv_uefi_simple_text_input_context_t * indev_ctx);
@@ -95,8 +95,8 @@ lv_indev_t * lv_uefi_simple_text_input_indev_create()
     indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_KEYPAD);
     lv_indev_set_user_data(indev, indev_ctx);
-    lv_indev_add_event_cb(indev, _event_cb, LV_EVENT_DELETE, indev);
-    lv_indev_set_read_cb(indev, _read_cb);
+    lv_indev_add_event_cb(indev, _simple_text_input_event_cb, LV_EVENT_DELETE, indev);
+    lv_indev_set_read_cb(indev, _simple_text_input_read_cb);
 
     return indev;
 }
@@ -169,7 +169,7 @@ void lv_uefi_simple_text_input_indev_add_all(
  *   STATIC FUNCTIONS
  **********************/
 
-static void _event_cb(lv_event_t * e)
+static void _simple_text_input_event_cb(lv_event_t * e)
 {
     lv_indev_t * indev;
     lv_uefi_simple_text_input_context_t * indev_ctx;
@@ -185,7 +185,7 @@ static void _event_cb(lv_event_t * e)
     if(indev_ctx != NULL) _simple_text_input_context_free(indev_ctx);
 }
 
-static void _read_cb(lv_indev_t * indev, lv_indev_data_t * data)
+static void _simple_text_input_read_cb(lv_indev_t * indev, lv_indev_data_t * data)
 {
     lv_uefi_simple_text_input_handle_context_t * handle_ctx = NULL;
     lv_uefi_simple_text_input_key_cache_t * key_cache = NULL;
