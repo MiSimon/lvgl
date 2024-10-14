@@ -45,6 +45,10 @@ extern "C" {
 
 #include "wayland/lv_wayland.h"
 
+#include "uefi/lv_uefi_context.h"
+#include "uefi/lv_uefi_indev.h"
+#include "uefi/lv_uefi_display.h"
+
 /*********************
  *      DEFINES
  *********************/
