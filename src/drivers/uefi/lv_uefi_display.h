@@ -37,7 +37,7 @@ extern "C" {
  * @param handle The handle on which an instance of the EFI_GRAPHICS_OUTPUT_PROTOCOL protocol is installed.
  * @return The created LVGL display object.
 */
-lv_display_t * lv_uefi_create_display(
+lv_display_t * lv_uefi_display_create(
     void * handle);
 
 /**
@@ -45,13 +45,13 @@ lv_display_t * lv_uefi_create_display(
  * @return The handle or NULL if not found.
  * @remark The active display need interfaces for EFI_GRAPHICS_OUTPUT_PROTOCOL and EFI_EDID_ACTIVE_PROTOCOL
 */
-void * lv_uefi_get_active_display();
+void * lv_uefi_display_get_active();
 
 /**
  * @brief Try to find any display handle.
  * @return The handle or NULL if not found.
 */
-void * lv_uefi_get_any_display();
+void * lv_uefi_display_get_any();
 
 /**********************
  *      MACROS

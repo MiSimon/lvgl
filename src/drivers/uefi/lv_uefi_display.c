@@ -36,11 +36,11 @@ typedef struct _lv_uefi_display_context_t {
  *  STATIC PROTOTYPES
  **********************/
 
-static void lv_uefi_display_event_cb(lv_event_t * e);
-static void lv_uefi_display_flush_cb(lv_display_t * display, const lv_area_t * area, uint8_t * px_map);
+static void _display_event_cb(lv_event_t * e);
+static void _display_flush_cb(lv_display_t * display, const lv_area_t * area, uint8_t * px_map);
 
-static void lv_uefi_display_ctx_free(lv_uefi_display_context_t * display_ctx);
-static bool lv_uefi_display_interface_is_valid(const EFI_GRAPHICS_OUTPUT_PROTOCOL * interface);
+static void _display_ctx_free(lv_uefi_display_context_t * display_ctx);
+static bool _display_interface_is_valid(const EFI_GRAPHICS_OUTPUT_PROTOCOL * interface);
 
 /**********************
  *  GOLBAL VARIABLES
@@ -66,20 +66,20 @@ static EFI_GUID _uefi_guid_edid_active = EFI_EDID_ACTIVE_PROTOCOL_GUID;
  * @param handle The handle on which an instance of the EFI_GRAPHICS_OUTPUT_PROTOCOL protocol is installed.
  * @return The created LVGL display object.
  */
-lv_display_t * lv_uefi_create_display(
+lv_display_t * lv_uefi_display_create(
     void * handle)
 {
     lv_display_t * display = NULL;
     lv_uefi_display_context_t * display_ctx;
 
-    if(!lv_uefi_test_protocol(handle, &_uefi_guid_graphics_output)) return NULL;
+    if(!lv_uefi_protocol_test(handle, &_uefi_guid_graphics_output)) return NULL;
 
     display_ctx = lv_calloc(1, sizeof(lv_uefi_display_context_t));
     LV_ASSERT_MALLOC(display_ctx);
 
     display_ctx->handle = handle;
-    display_ctx->gop_protocol = (EFI_GRAPHICS_OUTPUT_PROTOCOL *)lv_uefi_open_protocol(handle, &_uefi_guid_graphics_output);
-    if(!lv_uefi_display_interface_is_valid(display_ctx->gop_protocol)) {
+    display_ctx->gop_protocol = (EFI_GRAPHICS_OUTPUT_PROTOCOL *)lv_uefi_protocol_open(handle, &_uefi_guid_graphics_output);
+    if(!_display_interface_is_valid(display_ctx->gop_protocol)) {
         LV_LOG_WARN("[lv_uefi] The GOP interface is not valid.");
         goto error;
     }
@@ -92,8 +92,8 @@ lv_display_t * lv_uefi_create_display(
 
     display = lv_display_create(display_ctx->gop_protocol->Mode->Info->HorizontalResolution,
                                 display_ctx->gop_protocol->Mode->Info->VerticalResolution);
-    lv_display_add_event_cb(display, lv_uefi_display_event_cb, LV_EVENT_DELETE, display);
-    lv_display_set_flush_cb(display, lv_uefi_display_flush_cb);
+    lv_display_add_event_cb(display, _display_event_cb, LV_EVENT_DELETE, display);
+    lv_display_set_flush_cb(display, _display_flush_cb);
     lv_display_set_buffers(display, display_ctx->buffer, NULL, display_ctx->buffer_size, LV_DISPLAY_RENDER_MODE_DIRECT);
     lv_display_set_user_data(display, display_ctx);
 
@@ -106,7 +106,7 @@ error:
         display = NULL;
     }
 
-    if(display_ctx != NULL) lv_uefi_display_ctx_free(display_ctx);
+    if(display_ctx != NULL) _display_ctx_free(display_ctx);
 
 finish:
     return display;
@@ -117,7 +117,7 @@ finish:
  * @return The handle or NULL if not found.
  * @remark The active display need interfaces for EFI_GRAPHICS_OUTPUT_PROTOCOL and EFI_EDID_ACTIVE_PROTOCOL
 */
-void * lv_uefi_get_active_display()
+void * lv_uefi_display_get_active()
 {
     EFI_STATUS status;
     EFI_HANDLE active_handle = NULL;
@@ -134,8 +134,8 @@ void * lv_uefi_get_active_display()
     if(status != EFI_SUCCESS) goto error;
 
     for(index = 0; index < no_handles; index++) {
-        if(!lv_uefi_test_protocol(handles[index], &_uefi_guid_edid_active)) continue;
-        if(!lv_uefi_test_protocol(handles[index], &_uefi_guid_graphics_output)) continue;
+        if(!lv_uefi_protocol_test(handles[index], &_uefi_guid_edid_active)) continue;
+        if(!lv_uefi_protocol_test(handles[index], &_uefi_guid_graphics_output)) continue;
         active_handle = handles[index];
         break;
     }
@@ -154,7 +154,7 @@ finish:
  * @brief Try to find any display handle.
  * @return The handle or NULL if not found.
 */
-void * lv_uefi_get_any_display()
+void * lv_uefi_display_get_any()
 {
     EFI_STATUS status;
     EFI_HANDLE active_handle = NULL;
@@ -171,7 +171,7 @@ void * lv_uefi_get_any_display()
     if(status != EFI_SUCCESS) goto error;
 
     for(index = 0; index < no_handles; index++) {
-        if(!lv_uefi_test_protocol(handles[index], &_uefi_guid_graphics_output)) continue;
+        if(!lv_uefi_protocol_test(handles[index], &_uefi_guid_graphics_output)) continue;
         active_handle = handles[index];
         break;
     }
@@ -190,7 +190,7 @@ finish:
  *   STATIC FUNCTIONS
  **********************/
 
-static void lv_uefi_display_event_cb(lv_event_t * e)
+static void _display_event_cb(lv_event_t * e)
 {
     lv_display_t * display;
     lv_uefi_display_context_t * display_ctx;
@@ -203,10 +203,10 @@ static void lv_uefi_display_event_cb(lv_event_t * e)
     display_ctx = (lv_uefi_display_context_t *)lv_display_get_user_data(display);
     lv_display_set_user_data(display, NULL);
 
-    if(display_ctx != NULL) lv_uefi_display_ctx_free(display_ctx);
+    if(display_ctx != NULL) _display_ctx_free(display_ctx);
 }
 
-static void lv_uefi_display_flush_cb(lv_display_t * display, const lv_area_t * area, uint8_t * px_map)
+static void _display_flush_cb(lv_display_t * display, const lv_area_t * area, uint8_t * px_map)
 {
     EFI_STATUS status;
     int32_t w;
@@ -257,19 +257,19 @@ finish:
     lv_display_flush_ready(display);
 }
 
-static void lv_uefi_display_ctx_free(lv_uefi_display_context_t * display_ctx)
+static void _display_ctx_free(lv_uefi_display_context_t * display_ctx)
 {
     if(display_ctx == NULL) {
         return;
     }
 
-    if(display_ctx->gop_protocol != NULL) lv_uefi_close_protocol(display_ctx->handle, &_uefi_guid_graphics_output);
+    if(display_ctx->gop_protocol != NULL) lv_uefi_protocol_close(display_ctx->handle, &_uefi_guid_graphics_output);
     if(display_ctx->buffer != NULL) lv_free(display_ctx->buffer);
 
     lv_free(display_ctx);
 }
 
-static bool lv_uefi_display_interface_is_valid(const EFI_GRAPHICS_OUTPUT_PROTOCOL * interface)
+static bool _display_interface_is_valid(const EFI_GRAPHICS_OUTPUT_PROTOCOL * interface)
 {
     if(interface == NULL) return FALSE;
     if(interface->Mode == NULL) return FALSE;

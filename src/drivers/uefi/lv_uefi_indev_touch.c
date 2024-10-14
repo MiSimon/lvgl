@@ -45,13 +45,13 @@ typedef struct _lv_uefi_absolute_pointer_context_t {
  *  STATIC PROTOTYPES
  **********************/
 
-static void lv_uefi_absolute_pointer_indev_event_cb(lv_event_t * e);
-static void lv_uefi_absolute_pointer_read_cb(lv_indev_t * indev, lv_indev_data_t * data);
-static void lv_uefi_absolute_pointer_handle_context_free(void * ptr);
-static void lv_uefi_absolute_pointer_context_free(lv_uefi_absolute_pointer_context_t * indev_ctx);
-static bool lv_uefi_absolute_pointer_interface_is_valid(const EFI_ABSOLUTE_POINTER_PROTOCOL * interface);
-static void lv_uefi_absolute_pointer_read(lv_uefi_absolute_pointer_context_t * indev_ctx,
-                                          lv_uefi_absolute_pointer_handle_context_t * handle_ctx, bool * was_pressed);
+static void _absolute_pointer_indev_event_cb(lv_event_t * e);
+static void _absolute_pointer_read_cb(lv_indev_t * indev, lv_indev_data_t * data);
+static void _absolute_pointer_handle_context_free(void * ptr);
+static void _absolute_pointer_context_free(lv_uefi_absolute_pointer_context_t * indev_ctx);
+static bool _absolute_pointer_interface_is_valid(const EFI_ABSOLUTE_POINTER_PROTOCOL * interface);
+static void _absolute_pointer_read(lv_uefi_absolute_pointer_context_t * indev_ctx,
+                                   lv_uefi_absolute_pointer_handle_context_t * handle_ctx, bool * was_pressed);
 
 /**********************
  *  STATIC VARIABLES
@@ -72,7 +72,7 @@ static EFI_GUID _uefi_guid_absolute_pointer = EFI_ABSOLUTE_POINTER_PROTOCOL_GUID
  * @param display_res The resolution of the display in pixels, needed to scale the input.
  * @return The created LVGL indev object.
 */
-lv_indev_t * lv_uefi_create_absolute_pointer_indev(
+lv_indev_t * lv_uefi_absolute_pointer_indev_create(
     lv_point_t * display_res)
 {
     lv_indev_t * indev = NULL;
@@ -97,15 +97,15 @@ lv_indev_t * lv_uefi_create_absolute_pointer_indev(
     indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_user_data(indev, indev_ctx);
-    lv_indev_add_event_cb(indev, lv_uefi_absolute_pointer_indev_event_cb, LV_EVENT_DELETE, indev);
-    lv_indev_set_read_cb(indev, lv_uefi_absolute_pointer_read_cb);
+    lv_indev_add_event_cb(indev, _absolute_pointer_indev_event_cb, LV_EVENT_DELETE, indev);
+    lv_indev_set_read_cb(indev, _absolute_pointer_read_cb);
 
     return indev;
 }
 
 /**
  * @brief Add an EFI_ABSOLUTE_POINTER_PROTOCOL interface to the indev.
- * @param indev Indev that was created with lv_uefi_create_absolute_pointer_indev.
+ * @param indev Indev that was created with lv_uefi_absolute_pointer_indev_create.
  * @param handle The handle on which an instance of the EFI_ABSOLUTE_POINTER_PROTOCOL protocol is installed.
  * @return True if the interface was added.
 */
@@ -121,9 +121,9 @@ bool lv_uefi_absolute_pointer_indev_add_handle(
 
     if(indev_ctx->signature != ABSOLUTE_POINTER_INDEV_SIGNATURE) return false;
 
-    interface = (EFI_ABSOLUTE_POINTER_PROTOCOL *)lv_uefi_open_protocol(handle, &_uefi_guid_absolute_pointer);
-    if(!lv_uefi_absolute_pointer_interface_is_valid(interface)) {
-        lv_uefi_close_protocol(handle, &_uefi_guid_absolute_pointer);
+    interface = (EFI_ABSOLUTE_POINTER_PROTOCOL *)lv_uefi_protocol_open(handle, &_uefi_guid_absolute_pointer);
+    if(!_absolute_pointer_interface_is_valid(interface)) {
+        lv_uefi_protocol_close(handle, &_uefi_guid_absolute_pointer);
         LV_LOG_WARN("[lv_uefi] The ABSOLUTE_POINTER interface is not valid.");
         return false;
     }
@@ -146,7 +146,7 @@ bool lv_uefi_absolute_pointer_indev_add_handle(
 
 /**
  * @brief Add all available EFI_ABSOLUTE_POINTER_PROTOCOL interfaces to the indev.
- * @param indev Indev that was created with lv_uefi_create_absolute_pointer_indev.
+ * @param indev Indev that was created with lv_uefi_absolute_pointer_indev_create.
 */
 void lv_uefi_absolute_pointer_indev_add_all(
     lv_indev_t * indev)
@@ -178,7 +178,7 @@ void lv_uefi_absolute_pointer_indev_add_all(
  *   STATIC FUNCTIONS
  **********************/
 
-static void lv_uefi_absolute_pointer_indev_event_cb(lv_event_t * e)
+static void _absolute_pointer_indev_event_cb(lv_event_t * e)
 {
     lv_indev_t * indev;
     lv_uefi_absolute_pointer_context_t * indev_ctx;
@@ -191,10 +191,10 @@ static void lv_uefi_absolute_pointer_indev_event_cb(lv_event_t * e)
     indev_ctx = (lv_uefi_absolute_pointer_context_t *)lv_indev_get_user_data(indev);
     lv_indev_set_user_data(indev, NULL);
 
-    if(indev_ctx != NULL) lv_uefi_absolute_pointer_context_free(indev_ctx);
+    if(indev_ctx != NULL) _absolute_pointer_context_free(indev_ctx);
 }
 
-static void lv_uefi_absolute_pointer_read_cb(lv_indev_t * indev, lv_indev_data_t * data)
+static void _absolute_pointer_read_cb(lv_indev_t * indev, lv_indev_data_t * data)
 {
     void * node = NULL;
 
@@ -206,7 +206,7 @@ static void lv_uefi_absolute_pointer_read_cb(lv_indev_t * indev, lv_indev_data_t
         lv_uefi_absolute_pointer_handle_context_t * handle_ctx = (lv_uefi_absolute_pointer_handle_context_t *) node;
         bool was_pressed = false;
 
-        lv_uefi_absolute_pointer_read(indev_ctx, handle_ctx, &was_pressed);
+        _absolute_pointer_read(indev_ctx, handle_ctx, &was_pressed);
 
         data->state |= was_pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
     }
@@ -232,14 +232,14 @@ static void lv_uefi_absolute_pointer_read_cb(lv_indev_t * indev, lv_indev_data_t
     data->continue_reading = FALSE;
 }
 
-static void lv_uefi_absolute_pointer_context_free(lv_uefi_absolute_pointer_context_t * indev_ctx)
+static void _absolute_pointer_context_free(lv_uefi_absolute_pointer_context_t * indev_ctx)
 {
     if(indev_ctx == NULL) return;
-    lv_ll_clear_custom(&indev_ctx->handles, lv_uefi_absolute_pointer_handle_context_free);
+    lv_ll_clear_custom(&indev_ctx->handles, _absolute_pointer_handle_context_free);
     lv_free(indev_ctx);
 }
 
-static bool lv_uefi_absolute_pointer_interface_is_valid(const EFI_ABSOLUTE_POINTER_PROTOCOL * interface)
+static bool _absolute_pointer_interface_is_valid(const EFI_ABSOLUTE_POINTER_PROTOCOL * interface)
 {
     if(interface == NULL) return FALSE;
     if(interface->Mode == NULL) return FALSE;
@@ -248,17 +248,17 @@ static bool lv_uefi_absolute_pointer_interface_is_valid(const EFI_ABSOLUTE_POINT
     return TRUE;
 }
 
-static void lv_uefi_absolute_pointer_handle_context_free(void * ptr)
+static void _absolute_pointer_handle_context_free(void * ptr)
 {
     lv_uefi_absolute_pointer_handle_context_t * handle_ctx = (lv_uefi_absolute_pointer_handle_context_t *) ptr;
 
     if(handle_ctx == NULL) return;
-    if(handle_ctx->interface) lv_uefi_close_protocol(handle_ctx->handle, &_uefi_guid_absolute_pointer);
+    if(handle_ctx->interface) lv_uefi_protocol_close(handle_ctx->handle, &_uefi_guid_absolute_pointer);
     lv_free(handle_ctx);
 }
 
-static void lv_uefi_absolute_pointer_read(lv_uefi_absolute_pointer_context_t * indev_ctx,
-                                          lv_uefi_absolute_pointer_handle_context_t * handle_ctx, bool * was_pressed)
+static void _absolute_pointer_read(lv_uefi_absolute_pointer_context_t * indev_ctx,
+                                   lv_uefi_absolute_pointer_handle_context_t * handle_ctx, bool * was_pressed)
 {
     EFI_STATUS status;
     EFI_ABSOLUTE_POINTER_STATE state;

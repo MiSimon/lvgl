@@ -58,12 +58,6 @@ void lv_uefi_platform_init();
 */
 void lv_uefi_platform_deinit();
 
-/**
- * @brief Get the current millisecond value.
- * @return The value or MAX_UINT32 if the value is unknown.
-*/
-uint32_t lv_uefi_get_milliseconds();
-
 /**********************
  *      MACROS
  **********************/

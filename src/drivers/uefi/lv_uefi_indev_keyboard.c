@@ -47,19 +47,19 @@ typedef struct _lv_uefi_simple_text_input_context_t {
  *  STATIC PROTOTYPES
  **********************/
 
-static void lv_uefi_simple_text_input_indev_event_cb(lv_event_t * e);
-static void lv_uefi_simple_text_input_read_cb(lv_indev_t * indev, lv_indev_data_t * data);
+static void _event_cb(lv_event_t * e);
+static void _read_cb(lv_indev_t * indev, lv_indev_data_t * data);
 
-static void lv_uefi_simple_text_input_handle_context_free(void * ptr);
-static void lv_uefi_simple_text_input_context_free(lv_uefi_simple_text_input_context_t * indev_ctx);
+static void _simple_text_input_handle_context_free(void * ptr);
+static void _simple_text_input_context_free(lv_uefi_simple_text_input_context_t * indev_ctx);
 
-static bool lv_uefi_simple_text_input_interface_is_valid(const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL * interface);
+static bool _simple_text_input_interface_is_valid(const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL * interface);
 
-static void lv_uefi_simple_text_input_read(lv_uefi_simple_text_input_context_t * indev_ctx,
-                                           lv_uefi_simple_text_input_handle_context_t * handle_ctx);
+static void _simple_text_input_read(lv_uefi_simple_text_input_context_t * indev_ctx,
+                                    lv_uefi_simple_text_input_handle_context_t * handle_ctx);
 
-static uint32_t lv_uefi_utf8_from_unicode(UINT32 unicode);
-static uint32_t lv_uefi_key_from_uefi_key(const EFI_KEY_DATA * key);
+static uint32_t _utf8_from_unicode(UINT32 unicode);
+static uint32_t _key_from_uefi_key(const EFI_KEY_DATA * key);
 
 /**********************
  *  STATIC VARIABLES
@@ -79,7 +79,7 @@ static EFI_GUID _uefi_guid_simple_text_input = EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL
  * @brief Create an indev object.
  * @return The created LVGL indev object.
 */
-lv_indev_t * lv_uefi_create_simple_text_input_indev()
+lv_indev_t * lv_uefi_simple_text_input_indev_create()
 {
     lv_indev_t * indev = NULL;
     lv_uefi_simple_text_input_context_t * indev_ctx = NULL;
@@ -95,15 +95,15 @@ lv_indev_t * lv_uefi_create_simple_text_input_indev()
     indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_KEYPAD);
     lv_indev_set_user_data(indev, indev_ctx);
-    lv_indev_add_event_cb(indev, lv_uefi_simple_text_input_indev_event_cb, LV_EVENT_DELETE, indev);
-    lv_indev_set_read_cb(indev, lv_uefi_simple_text_input_read_cb);
+    lv_indev_add_event_cb(indev, _event_cb, LV_EVENT_DELETE, indev);
+    lv_indev_set_read_cb(indev, _read_cb);
 
     return indev;
 }
 
 /**
  * @brief Add an EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL interface to the indev.
- * @param indev Indev that was created with lv_uefi_create_keyboard_indev.
+ * @param indev Indev that was created with lv_uefi_simple_text_input_indev_create.
  * @param handle The handle on which an instance of the EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL protocol is installed.
  * @return True if the interface was added.
 */
@@ -119,9 +119,9 @@ bool lv_uefi_simple_text_input_indev_add_handle(
 
     if(indev_ctx->signature != SIMPLE_TEXT_INPUT_INDEV_SIGNATURE) return false;
 
-    interface = (EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL *)lv_uefi_open_protocol(handle, &_uefi_guid_simple_text_input);
-    if(!lv_uefi_simple_text_input_interface_is_valid(interface)) {
-        lv_uefi_close_protocol(handle, &_uefi_guid_simple_text_input);
+    interface = (EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL *)lv_uefi_protocol_open(handle, &_uefi_guid_simple_text_input);
+    if(!_simple_text_input_interface_is_valid(interface)) {
+        lv_uefi_protocol_close(handle, &_uefi_guid_simple_text_input);
         LV_LOG_WARN("[lv_uefi] The SIMPLE_TEXT_INPUT interface is not valid.");
         return false;
     }
@@ -137,7 +137,7 @@ bool lv_uefi_simple_text_input_indev_add_handle(
 
 /**
  * @brief Add all available EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL interfaces to the indev.
- * @param indev Indev that was created with lv_uefi_create_keyboard_indev.
+ * @param indev Indev that was created with lv_uefi_simple_text_input_indev_create.
 */
 void lv_uefi_simple_text_input_indev_add_all(
     lv_indev_t * indev)
@@ -169,7 +169,7 @@ void lv_uefi_simple_text_input_indev_add_all(
  *   STATIC FUNCTIONS
  **********************/
 
-static void lv_uefi_simple_text_input_indev_event_cb(lv_event_t * e)
+static void _event_cb(lv_event_t * e)
 {
     lv_indev_t * indev;
     lv_uefi_simple_text_input_context_t * indev_ctx;
@@ -182,10 +182,10 @@ static void lv_uefi_simple_text_input_indev_event_cb(lv_event_t * e)
     indev_ctx = (lv_uefi_simple_text_input_context_t *)lv_indev_get_user_data(indev);
     lv_indev_set_user_data(indev, NULL);
 
-    if(indev_ctx != NULL) lv_uefi_simple_text_input_context_free(indev_ctx);
+    if(indev_ctx != NULL) _simple_text_input_context_free(indev_ctx);
 }
 
-static void lv_uefi_simple_text_input_read_cb(lv_indev_t * indev, lv_indev_data_t * data)
+static void _read_cb(lv_indev_t * indev, lv_indev_data_t * data)
 {
     lv_uefi_simple_text_input_handle_context_t * handle_ctx = NULL;
     lv_uefi_simple_text_input_key_cache_t * key_cache = NULL;
@@ -199,7 +199,7 @@ static void lv_uefi_simple_text_input_read_cb(lv_indev_t * indev, lv_indev_data_
         // Read from all registered devices
         for(node = lv_ll_get_head(&indev_ctx->handles); node != NULL; node = lv_ll_get_next(&indev_ctx->handles, node)) {
             handle_ctx = (lv_uefi_simple_text_input_handle_context_t *) node;
-            lv_uefi_simple_text_input_read(indev_ctx, handle_ctx);
+            _simple_text_input_read(indev_ctx, handle_ctx);
         }
     }
 
@@ -217,31 +217,31 @@ static void lv_uefi_simple_text_input_read_cb(lv_indev_t * indev, lv_indev_data_
     data->continue_reading = !lv_ll_is_empty(&indev_ctx->key_cache);
 }
 
-static void lv_uefi_simple_text_input_context_free(lv_uefi_simple_text_input_context_t * indev_ctx)
+static void _simple_text_input_context_free(lv_uefi_simple_text_input_context_t * indev_ctx)
 {
     if(indev_ctx == NULL) return;
-    lv_ll_clear_custom(&indev_ctx->handles, lv_uefi_simple_text_input_handle_context_free);
+    lv_ll_clear_custom(&indev_ctx->handles, _simple_text_input_handle_context_free);
     lv_ll_clear(&indev_ctx->key_cache);
     lv_free(indev_ctx);
 }
 
-static bool lv_uefi_simple_text_input_interface_is_valid(const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL * interface)
+static bool _simple_text_input_interface_is_valid(const EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL * interface)
 {
     if(interface == NULL) return FALSE;
     return TRUE;
 }
 
-static void lv_uefi_simple_text_input_handle_context_free(void * ptr)
+static void _simple_text_input_handle_context_free(void * ptr)
 {
     lv_uefi_simple_text_input_handle_context_t * handle_ctx = (lv_uefi_simple_text_input_handle_context_t *)ptr;
 
     if(handle_ctx == NULL) return;
-    if(handle_ctx->interface) lv_uefi_close_protocol(handle_ctx->handle, &_uefi_guid_simple_text_input);
+    if(handle_ctx->interface) lv_uefi_protocol_close(handle_ctx->handle, &_uefi_guid_simple_text_input);
     lv_free(handle_ctx);
 }
 
-static void lv_uefi_simple_text_input_read(lv_uefi_simple_text_input_context_t * indev_ctx,
-                                           lv_uefi_simple_text_input_handle_context_t * handle_ctx)
+static void _simple_text_input_read(lv_uefi_simple_text_input_context_t * indev_ctx,
+                                    lv_uefi_simple_text_input_handle_context_t * handle_ctx)
 {
     EFI_STATUS status;
     EFI_KEY_DATA state;
@@ -260,7 +260,7 @@ static void lv_uefi_simple_text_input_read(lv_uefi_simple_text_input_context_t *
         return;
     }
 
-    key = lv_uefi_key_from_uefi_key(&state);
+    key = _key_from_uefi_key(&state);
 
     // insert the press
     cache = (lv_uefi_simple_text_input_key_cache_t *) lv_ll_ins_tail(&indev_ctx->key_cache);
@@ -275,7 +275,7 @@ static void lv_uefi_simple_text_input_read(lv_uefi_simple_text_input_context_t *
     cache->pressed = false;
 }
 
-static uint32_t lv_uefi_utf8_from_unicode(UINT32 unicode)
+static uint32_t _utf8_from_unicode(UINT32 unicode)
 {
     uint8_t bytes[4] = {0, 0, 0, 0};
 
@@ -303,7 +303,7 @@ static uint32_t lv_uefi_utf8_from_unicode(UINT32 unicode)
     return *((uint32_t *)bytes);
 }
 
-static uint32_t lv_uefi_key_from_uefi_key(const EFI_KEY_DATA * key)
+static uint32_t _key_from_uefi_key(const EFI_KEY_DATA * key)
 {
     LV_ASSERT_NULL(key);
 
@@ -342,7 +342,7 @@ static uint32_t lv_uefi_key_from_uefi_key(const EFI_KEY_DATA * key)
         case 0x18:
             return LV_KEY_ESC;
         default:
-            return lv_uefi_utf8_from_unicode(key->Key.UnicodeChar);
+            return _utf8_from_unicode(key->Key.UnicodeChar);
     }
 }
 

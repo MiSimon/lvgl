@@ -55,7 +55,7 @@ extern EFI_RUNTIME_SERVICES * gLvEfiRT;
  * @param protocol The guid of the protocol.
  * @return TRUE if the protocol is installed, FALSE if not.
 */
-bool lv_uefi_test_protocol(
+bool lv_uefi_protocol_test(
     EFI_HANDLE handle,
     EFI_GUID * protocol);
 
@@ -65,7 +65,7 @@ bool lv_uefi_test_protocol(
  * @param protocol The guid of the protocol.
  * @return A pointer to the interface, NULL if the protocol couldn't be opened.
 */
-void * lv_uefi_open_protocol(
+void * lv_uefi_protocol_open(
     EFI_HANDLE handle,
     EFI_GUID * protocol);
 
@@ -74,7 +74,7 @@ void * lv_uefi_open_protocol(
  * @param handle The handle on which the protocol is installed.
  * @param protocol The guid of the protocol.
 */
-void lv_uefi_close_protocol(
+void lv_uefi_protocol_close(
     EFI_HANDLE handle,
     EFI_GUID * protocol);
 
